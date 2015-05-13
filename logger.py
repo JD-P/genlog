@@ -334,6 +334,24 @@ class Logger():
         json.dump(settings, config)
         config.close()
 
+    def search_column(self, column_data, searchterm, field):
+        """Search the column with the regex searchterm using the fields search 
+        function or a fallback."""
+        if "search" in field.scripts.keys():
+            search_results = field.search(searchterm, column_data)
+            return search_results
+        else:
+            try:
+                pattern = re.compile(searchterm)
+            except:
+                return 'regex_compile_error'
+            search_results = []
+            for index in range(0, len(column_data)):
+                item = column_data[index]
+                if pattern.search(item):
+                    search_results.append((index, item))
+            return search_results
+
     def verify_file_before_write(self, filepath):
         """Verify that a file does not already exist and is not a directory
         and that the path to new file is writable."""
