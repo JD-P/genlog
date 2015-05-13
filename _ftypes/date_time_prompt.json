@@ -1,0 +1,4 @@
+{"name":"date_time_prompt",
+"type":"date_time",
+"scripts":
+	{"prompt":"delay"}}

@@ -1,0 +1,5 @@
+{"name":"sltext",
+"type":"generic",
+"scripts":
+	{"prompt":"sltext_prompt",
+	"oformat":"text_oformat"}}

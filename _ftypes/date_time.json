@@ -1,0 +1,8 @@
+{"name":"date_time",
+"type":"generic",
+"scripts":
+	{"prompt":"no_prompt",
+	"oformat":"date_time_oformat",
+	"search":"date_time_search",
+	"on_input":"date_time"}}
+	

@@ -1,0 +1,10 @@
+{"name":"generic",
+"type":"generic",
+"scripts": 
+	   {"prompt":"default_prompt",
+	   "oformat":"default_oformat",
+	   "search":"default_search",
+	   "rscript":null,
+	   "on_display":null,
+	   "on_input":null},
+"rtemplate":null}

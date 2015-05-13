@@ -1,0 +1,5 @@
+{"name":"sltext",
+"type":"sltext",
+"scripts":
+	{"prompt":"sltext_prompt",
+	"oformat":"text_format"

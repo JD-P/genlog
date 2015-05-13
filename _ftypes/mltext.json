@@ -1,0 +1,7 @@
+{"name":"mltext",
+"type":"sltext"
+"scripts":
+	{"prompt":"no_prompt",
+	"on_display": "mltext_display_prompt",
+	"on_input":"mltext_input_finish"}}
+	
