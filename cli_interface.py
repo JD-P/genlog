@@ -70,7 +70,8 @@ class CliUtils():
         return evaluation_results
 
     def validation(cls, self, input_line, regex, orientation, errormsg):
-        """Set the name of the field/column."""
+        """Validate a line of input given a regex and orientation for a 
+        Restriction and an error message to print on failure."""
         criteria = Restriction(regex, orientation)
         if criteria.validate(input_line):
             return True
@@ -264,6 +265,7 @@ class CliLogMenu(cmd.Cmd):
         self.prompt = ("(" + logname + ")" + ">")
         settings = Logger.readconf(Logger, self.logger)
         self.fields = Logger.getfields(Logger, settings, self.logger)
+        self.log = Logger.load_log(Logger, logger)
         self.cursor = []
 
     def do_status(self, arg):
@@ -274,7 +276,9 @@ class CliLogMenu(cmd.Cmd):
     def do_add(self, arg):
         """Write a new entry in the log: ADD"""
         edict = CliUtils.log(CliUtils, self.fields, self.logger)
-        self.cursor.append(edict)
+        index = (len(self.log[0]["data"]) - 1)
+        self.cursor.append((index, edict))
+        return False
 
     def do_view(self, identifier):
         """View log that's specified by identifier given as argument: VIEW 
@@ -285,21 +289,82 @@ class CliLogMenu(cmd.Cmd):
         """Search the column using search term. Search terms are regexes, but some
         column types implement their own custom search functionality that may 
         extend or replace this entirely."""
-        pass
+        field = self.fields[column]
+        column_dict = self.log[column]
+        if field["fname"] != column_dict["fname"]:
+            raise ValueError("Columns out of sync/data corruption. Assumption"
+                             " about data has been violated.")
+        else:
+            data = column_dict["data"]
+            search_results = Logger.search_column(Logger, data, searchterm, field)
+            if search_results == 'regex_compile_error':
+                CliUtils.input_error(CliUtils, self, "Search term was not a valid Regex.")
+                return False
+            else:
+                CliUtils.print_iterable(CliUtils, self, search_results, 4)
+            
 
     def do_edit(self, identifier):
         """Edit the entry that's specified by identifier given as argument: EDIT
         <IDENTIFIER>"""
         pass
 
-    def do_export(self, filepath):
-        """Export log if nothing in cursor, otherwise export entries in cursor 
-        to filepath: EXPORT <filepath>"""
-        if self.cursor:
-            pass
-        else:
+    def do_export(self, args):
+        """This command does different things depending on what it recieves as
+        it's first argument. If the first argument is 'cursor' it exports the 
+        contents of cursor to a second argument filepath. If the first argument
+        is 'entries' then it takes a colon seperated list of ranges as a second
+        argument and uses those to grab and export the logs indicated by the
+        ranges to the filepath given as a third argument. If the first argument 
+        is 'log' then it exports the entire log to the filepath given as a second 
+        argument.
+
+        Examples:
+
+        export cursor <filepath> (Exports content of cursor to filepath.)
+
+        export entries 10,15:30,35 <filepath> (Exports the set of entries between and
+        including ten and fifteen, and between and including thirty and thirty 
+        five to filepath.)
+
+        export log <filepath> (Exports the entire log to filepath.)
+        """
+        argsplit = args.split()
+        if argsplit[0] == 'cursor':
+            filepath = argsplit[1]
+            export_result = Logger.export_direct(Logger, self.cursor, filepath)
+            CliUtils.export_error_handler(CliUtils, self, filepath, export_result)
+            return False
+        elif argsplit[0] == 'entries':
+            if CliUtils.validation(CliUtils,
+                                   self,
+                                   "(?:([0-9]+),([0-9]+)(:?)?)+",
+                                   "keep",
+                                   "Range given was not a range: Ranges should be "
+                                   "comma seperated value pairs seperated by colons"
+                                   ". eg. 0,5:50,60"):
+                entries = []
+                ranges = argsplit[1].split(":")
+                for _range in ranges:
+                    pair = _range.split(",")
+                    start = pair[0]
+                    end = pair[1]
+                    entries.append(range(start, end))
+                filepath = argsplit[2]
+                export_result = Logger.export_entries(Logger, 
+                                                      self.logger,
+                                                      entries,
+                                                      self.fields,
+                                                      filepath)
+                CliUtils.export_error_handler(CliUtils, self, filepath, export_result)
+                return False
+        elif argsplit[0] == 'log':
             export_result = Logger.export(Logger, self.logger, filepath)
             CliUtils.export_error_handler(CliUtils, self, filepath, export_result)
+            return False
+        else:
+            CliUtils.input_error(CliUtils, self, "Invalid first argument '" + 
+                                 argsplit[0] + "'. See help for more details.")
             return False
 
     def do_finish(self, arg):
