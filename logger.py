@@ -413,6 +413,18 @@ class Logger():
             export_archive.close()
             return True
 
+    def export_direct(self, data, filepath):
+        """Export the objects in data to zipped json archive at filepath."""
+        pathcheck = self.verify_file_before_write(filepath)
+        if pathcheck is not True:
+            return pathcheck
+        else:
+            export_archive = zipfile.ZipFile(filepath, "w")
+            data_json = json.dumps(data)
+            export_archive.writestr("data.json", data_json)
+            export_archive.close()
+            return True
+
     def export_entries(self, logname, entries, fields, filepath):
         """Export the entries of logname given by the list of ranges <entries>
         to filepath."""
@@ -421,7 +433,11 @@ class Logger():
             return pathcheck
         else:
             log_entries = self.load_log_entries(logname, entries, fields)
-            return log_entries
+            export_archive = zipfile.ZipFile(filepath, "w")
+            entries_json = json.dumps(log_entries)
+            export_archive.writestr("entries.json", entries_json)
+            export_archive.close()
+            return True
         
 
 class LogPrinter():
