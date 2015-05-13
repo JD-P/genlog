@@ -441,7 +441,46 @@ class Logger():
         
 
 class LogPrinter():
-    """Print the log in text format(s)."""
+    """Genlog implements a dynamic log printing system that gives execution 
+    hooks to style output and control line wrapping. Each column declares a
+    minimum and maximum width, which works within the context of the log itself
+    declaring a minimum and maximum width for each line of the output. 
+
+    Each minimum and maximum is either *fixed* or *dynamic*. Dynamic columns
+    can be trimmed to fit the requirements of the log output, fixed columns
+    *must* be printed with their full width on each line. Fixed columns are
+    dangerous because if they exceed the fixed maximum of the log you get an
+    error so dynamic columns are always preferred where possible. 
+
+    With columns fixed and dynamic control what happens when line wrapping is 
+    forced by the output. In logs it controls what is allowable output and how 
+    much space columns have to work with.
+
+    The exact behavior of each is as follows:
+
+    For logs:
+
+    Fixed Minimum:
+        Each line *must* be at least as many characters as the minimum defined.
+
+    Fixed Maximum:
+        Each line *must* be no more than as many characters as the maximum 
+        defined.
+    
+    Dynamic minimum:
+        
+    """
+    class Minimum(width, width_type='dynamic'):
+        """Set the minimum width of a column in the text output.
+        Width is a limited resource because there is only so much screen real
+        estate to display characters with. """
+        self.width = width
+        self.width_type = width_type
+    class Maximum(width, width_type='dynamic'):
+        """Set the maximum width of a column in the text output.
+        
+        self.width = width
+        self.width_type = width_type
     def tlogwrt(self, entry,log):
         """Take an entry dictionary and write out to the human readable log based on it."""
         # Check if textlog file exists, if not write instead of append
