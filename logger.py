@@ -449,7 +449,7 @@ class LogPrinter():
     Each minimum and maximum is either *fixed* or *dynamic*. Dynamic columns
     can be trimmed to fit the requirements of the log output, fixed columns
     *must* be printed with their full width on each line. Fixed columns are
-    dangerous because if they exceed the fixed maximum of the log you get an
+    dangerous because if they exceed the fixed properties of the log you get an
     error so dynamic columns are always preferred where possible. 
 
     With columns fixed and dynamic control what happens when line wrapping is 
@@ -467,20 +467,215 @@ class LogPrinter():
         Each line *must* be no more than as many characters as the maximum 
         defined.
     
-    Dynamic minimum:
-        
+    Dynamic Minimum:
+        The printer will try to optimize the widths of columns so that each line
+        is at least this many characters long. But it won't gauruntee it.
+
+    Dynamic Maximum:
+        The printer will try to optimize the widths of columns so that each line
+        is no more than this many characters, but it won't guauruntee it.
+
+    For columns:
+
+    Fixed Maximum:
+        The printer *must* give the column this much space for line wrapping.
+
+    Fixed Minimum:
+        The printer *must* give the column this much space for line wrapping.
+        Only taken into account when the column has a dynamic maximum.
+
+    Dynamic Maximum:
+        The printer will try to optimize the widths of columns so that
+        this field will have its ideal line wrapping width. But it's not 
+        guarunteed.
+
+    Dynamic Minimum:
+        The printer will try to optimize the widths of columns so that 
+        this field will have at least this much line wrapping width. But it's
+        not guarunteed.
+
+    Printer objects are composed from two base objects, a Minimum and a Maximum
+    which have their dynamicism as object attributes along with a width. Each 
+    column has an execution hook that takes the data in the column and has full
+    access to pythons programming facilities to manipulate and style the data.
+    Each log has an execution hook that takes each row in the log after it's been
+    styled by the execution hooks for each column and returns styling applied 
+    across the entire row, with control of seperators and the header and footer
+    of the log file.
+
+    The process for determining how much space each column gets is as follows:
+
+    Fixed width columns are allotted the necessary space from what is available.
+    Since fixed maximums demand that a certain amount of space be *available*
+    they are considered first and their minimums ignored. If these exceed the
+    fixed parameters of the PrintLog object then an error is raised. Next the
+    fixed minimums are considered for those fields which have a dynamic maximum.
+    If these combined with the fixed maximums exceed the fixed parameters of the
+    log an error is raised. 
+
+    Finally dynamic column widths are considered. For dynamic columns
+    the amount of space left is evaluated and if sufficient all dynamic columns
+    are granted their maximum line wrapping width. Otherwise the smallest column
+    width is used to determine a ratio between the columns that will be used to
+    trim their lengths down from their dynamic maximums. When a column reaches
+    it's minimum dynamic or otherwise then trimming other dynamic maximums down
+    to their minimum will take priority over trimming past the dynamic minimum.
+
+    Only once all other resources have been exhausted will the printer start
+    trimming widths past their dynamic minimums to save space.
+
+    Dealing with unbounded maximums:
+    As fixed maximums are allowed to declare an unbounded amount of space using 
+    the '*', if this is the case then all dynamic columns are reduced to their 
+    minimum fixed or otherwise and more will be trimmed in the case of conflicts.
+
+    Dynamic maximums that declare an unbounded amount of space are given as much
+    space as it is possible to give within the constraint that it will not bring
+    column widths down past their minimum dynamic or otherwise.
+
+    If multiple columns declare unbounded widths then the space will be divided
+    equally among them.
     """
-    class Minimum(width, width_type='dynamic'):
+    class AbstractWidth():
+        """Base class for minimum and maximum widths for columns."""
+        def __init__(self, width, width_type='dynamic'):
+            if width_type not in ('dynamic', 'fixed'):
+                raise ValueError("Width type" + width_type + "not a valid type.")
+            elif not isinstance(width, int):
+                raise ValueError("Width must be of type int, got '" + 
+                                 str(type(width)) + "'.")
+            elif width < 1:
+                raise ValueError("Width must be at least one.")
+            else:
+                self.width = width
+                self.width_type = width_type
+
+    class Minimum(AbstractWidth):
         """Set the minimum width of a column in the text output.
-        Width is a limited resource because there is only so much screen real
-        estate to display characters with. """
-        self.width = width
-        self.width_type = width_type
-    class Maximum(width, width_type='dynamic'):
+        Valid values for width_type are 'dynamic' and 'fixed'.
+        """
+        pass
+
+    class Maximum(AbstractWidth):
         """Set the maximum width of a column in the text output.
-        
-        self.width = width
-        self.width_type = width_type
+        Valid values for width_type are 'dynamic' and 'fixed'.
+        """
+        pass
+
+    class AbstractPrint():
+        """Base class for print objects such as logs and columns."""
+        def __init__(self, minimum, maximum)::
+            if minimum.width > maximum.width:
+                raise ValueError("Minimum was greater than Maximum.")
+            self.minimum = minimum
+            self.maximum = maximum
+
+    class PrintLog(AbstractPrint):
+        'Defines the line wrapping width and dimensions of a log output medium.'
+        def __init__(self, minimum, maximum):
+            super()__init__(self, minimum, maximum)
+            self.fixed_column_spacing = {}
+            self.dynamic_column_spacing = {}
+
+        def _print_debug(self, pcolumn_widths):
+            """Print debugging info for someone to figure out what fixed columns
+            caused an error."""
+            erronous_pcolumns = {}
+            for pcolumn in pcolumns:
+                fname = pcolumn.column["fname"]
+                
+
+        def add_fixed_spacing(self, pcolumn):
+            """Add and check the space declaration to the print objects internal 
+            tracker."""
+            if pcolumn.maxium.width_type == 'fixed':
+                print_object.column_spacing[pcolumn] = pcolumn.maximum.width
+                self.column_spacing[pcolumn] = pcolumn.maximum.width
+            elif pcolumn.minimum.width_type == 'fixed' and pcolumn.maximum.width_type == 'dynamic':
+                print_object.column_spacing[pcolumn] = pcolumn.minimum.width
+                self.column_spacing[pcolumn] = pcolumn.minimum.width
+            else:
+                return False
+            fixed_max_pcolumn_widths = {}
+            fixed_min_pcolumn_widths = {}
+            for space_declaration in self.fixed_column_spacing:
+                fwidth = fixed_column_spacing[space_declaration]
+                if space_declaration.maximum.width >= fwidth:
+                    fname = space_declaration.column["fname"]
+                    fixed_max_pcolumn_widths[fname] = fwidth
+                else:
+                    fname = space_declaration.column["fname"]
+                    fixed_min_pcolumn_widths[fname] = fwidth
+            if sum(fixed_max_widths) > self.maximum.width:
+                print(self.fixed_column_spacing)
+                raise ValueError("Length of fixed
+
+        def add_dynamic_spacing(self, pcolumn):
+            """
+            
+            
+    class PrintColumn(AbstractPrint):
+        'Defines the line wrapping width of a single column to be printed.'
+        def __init__(self, minimum, maximum, column):
+            super()__init__(self, minimum, maximum)
+            self.column = column
+
+    class OutputFormat():
+        """Template class for an oformat module. 
+        """
+        def spacing(self, column, column_formats, print_object, known={}):
+            """A stub to be filled in by a real function.
+
+            Should return a PrintColumn object.
+            """
+            pass
+
+        def format(self, column, width):
+            """A stub to be filled in by a real function."""
+            pass
+
+    def print_to(self, log, print_object):
+        """Print a log object given as JSON and return text formatted according
+        to the properties of the given print object."""
+        #routine to grab the oformat scripts and etc for each column
+
+    def spacing_negotiation(self, column_formats, print_object):
+        """Call the spacing declaration method of each oformat script module.
+        Each call is passed the other oformat modules and the print_object to
+        prepare spacing for. The first step of the log printing process is to
+        figure out the space allocated to each column to print in, each call
+        ultimately returns a PrintColumn object that is evaluated by the Printer
+        to determine final widths for each column. 
+
+        Since the PrintColumn returned might depend on what the other columns
+        declare it is possible that a oformat spacing negotiation method might
+        run the spacing negotiation methods of the other columns with the same
+        information it recieved when it was called along with its desired width
+        to see what that means the other columns will declare and adjust its own
+        width accordingly.
+
+        column_formats: A list of tuples where each tuple is a pair with
+        a column on the left and its oformat module on the right.
+
+        print_object: The print medium to prepare spacing for.
+        """
+        column_widths = []
+        for method in column_formats:
+            column_formats[0] = column
+            column_formats[1] = oformat
+            declaration = oformat.spacing(column, column_formats, print_object)
+            column_widths.append(declaration)
+        return column_widths
+
+    def determine_widths(self, column_widths, print_object):
+        """Given the spacing declarations of each column and the dimensions of
+        the print medium, determine how much space each column will actually get 
+        to print in.
+        """
+        for pcolumn in column_widths:
+            print_object.add_spacing(pcolumn)
+
+    
     def tlogwrt(self, entry,log):
         """Take an entry dictionary and write out to the human readable log based on it."""
         # Check if textlog file exists, if not write instead of append
