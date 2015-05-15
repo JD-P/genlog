@@ -1,30 +1,30 @@
 #!/usr/bin/python3
 
-# We start by importing time and datetime. The former lets us get and write the current time and date to a file. The latter lets us get the distance between two times
+
 
 import time,datetime
 
-# We import json so that we can put both the machine readable version and the version formatted for human consumption in seperate files.
 
 import json
 
-# We import os so that we can make the config file if it doesn't already exist, and check for its existence.
 
 import os
 
-# We import string for input validation
 
 import string
 
-# We import argparse to handle command line arguments.
 
 import argparse
 
+
 import cmd
+
 
 import re
 
+
 import importlib
+
 
 import zipfile
 
