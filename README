@@ -1,0 +1,28 @@
+THIS PROJECT IS NOT FINISHED!!!
+
+It shouldn't even really be in a runnable state at this point.
+
+As a short intro to what it is/is going to be:
+
+This is a generic log templator program that can keep track of mundane things
+like how often you brush your teeth, and more important things like billable
+hours for contract work. It lets a user construct a template, log information
+into it, and print this information in various output formats. And it performs
+most of this through execution hooks that make the program highly user extensible.
+
+Until it's done though, this readme is my todo list:
+
+1. Remove the 'main' functionality in both logger.py and cli_interface.py and
+move this sort of handling into a 'boot_interface.py' that lets features of the
+program be accessed from a command line invocation.
+
+2. Remove the 'options' function in cli_interface.py and replace it with a 
+suitable field template and script.
+
+3. Finish the log printing functionality.
+
+4. Add 'reload' functionality so that log entries can be edited and field 
+templates can be edited.
+
+5. Write a manual explaining the data model, use model, and operation of the 
+program.
