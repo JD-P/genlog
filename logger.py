@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-
-
 import time,datetime
 
 
@@ -27,6 +25,7 @@ import importlib
 
 
 import zipfile
+
 
 class Logger():
     """Implements the core logging facilities."""
