@@ -26,6 +26,8 @@ import importlib
 
 import zipfile
 
+import pprint
+
 
 class Logger():
     """Implements the core logging facilities."""
@@ -586,28 +588,57 @@ class LogPrinter():
 
         def add_fixed_spacing(self, pcolumn):
             """Add and check the space declaration to the print objects internal 
-            tracker."""
+            tracker.
+
+            For each given print column, the print medium checks that it plus 
+            the previous print columns does not overflow the constraints of what 
+            is allowable in the print medium. since a print column can be in the 
+            fixed category for a minimum or a maximum the print medium also has 
+            to remember which the space allocation was based off of.
+            """
             if pcolumn.maxium.width_type == 'fixed':
-                print_object.column_spacing[pcolumn] = pcolumn.maximum.width
-                self.column_spacing[pcolumn] = pcolumn.maximum.width
-            elif pcolumn.minimum.width_type == 'fixed' and pcolumn.maximum.width_type == 'dynamic':
-                print_object.column_spacing[pcolumn] = pcolumn.minimum.width
-                self.column_spacing[pcolumn] = pcolumn.minimum.width
+                basis = pcolumn.maximum
+                allocation = pcolumn.maximum.width
+                self.fixed_column_spacing[pcolumn] = {"basis":basis, 
+                                                      "allocation":allocation}
+            elif (pcolumn.minimum.width_type == 'fixed' and 
+                  pcolumn.maximum.width_type == 'dynamic'):
+                basis = pcolumn.minimum
+                allocation = pcolumn.minimum.width
+                self.fixed_column_spacing[pcolumn] = {"basis":basis, 
+                                                      "allocation":allocation}
             else:
                 return False
-            fixed_max_pcolumn_widths = {}
-            fixed_min_pcolumn_widths = {}
-            for space_declaration in self.fixed_column_spacing:
-                fwidth = fixed_column_spacing[space_declaration]
-                if space_declaration.maximum.width >= fwidth:
-                    fname = space_declaration.column["fname"]
-                    fixed_max_pcolumn_widths[fname] = fwidth
+            fixed_max_widths = {}
+            fixed_min_widths = {}
+            for space_allocation in self.fixed_column_spacing:
+                allocation_dict = fixed_column_spacing[space_allocation]
+                if space_allocation.maximum is allocation_dict["basis"]:
+                    fname = space_allocation.column["fname"]
+                    allocation = allocation_dict["allocation"]
+                    fixed_max_widths[fname] = allocation
+                elif space_allocation.minimum is allocation_dict["basis"]:
+                    fname = space_allocation.column["fname"]
+                    allocation = allocation_dict["allocation"]
+                    fixed_min_widths[fname] = allocation
                 else:
-                    fname = space_declaration.column["fname"]
-                    fixed_min_pcolumn_widths[fname] = fwidth
-            if sum(fixed_max_widths) > self.maximum.width:
-                print(self.fixed_column_spacing)
-                raise ValueError("Length of fixed
+                    raise ValueError("Supposed to have fixed basis but didn't"
+                                     " pass relevant tests.")
+            if sum(fixed_max_widths.values()) > self.maximum.width:
+                pprint.pprint(fixed_max_widths)
+                raise ValueError("Length of fixed maximums exceeded constraints"
+                                 " of print medium.")
+            elif sum(fixed_min_widths.values()) > self.maximum.width:
+                pprint.pprint(fixed_min_widths)
+                raise ValueError("Length of fixed minimums exceeded constraints"
+                                 " of print medium.")
+            elif (sum(fixed_max_widths.values()) + 
+                  sum(fixed_min_widths.values())) > self.maximum.width:
+                pprint.pprint((fixed_max_widths, fixed_min_widths))
+                raise ValueError("Length of fixed minimums and fixed maximums"
+                                 " exceeded constraints of print medium.")
+            else:
+                return True
 
         def add_dynamic_spacing(self, pcolumn):
             """
