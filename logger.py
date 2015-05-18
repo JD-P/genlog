@@ -680,6 +680,15 @@ class LogPrinter():
                 dynamic_spacing.append(pcolumn_buffer[pcolumn]["allocation"])
             if sum(dynamic_spacing) > remaining_space:
                 trimmed_columns = self.trim_space(dynamic_buffer, remaining_space)
+                columns = {}
+                for column in trimmed_columns:
+                    pcolumn = column[0]
+                    allocation = column[1]
+                    columns[pcolumn] = allocation
+            elif sum(dynamic_spacing) <= remaining_space:
+                columns = dynamic_buffer
+            self.dynamic_column_spacing = columns
+            return True
 
         def finalize_allocation(self):
             """After all space allocations have been added to the internal 
@@ -750,7 +759,7 @@ class LogPrinter():
                         else:
                             pass
 
-        def trim_minimums(self, trimmed_columns, remaining_space):
+        def trim_minimums(self, dynamic_buffer, trimmed_columns, remaining_space):
             """Trim a set of dynamic minimums after they've already been trimmed
             as dynamic maximums.
 
@@ -759,15 +768,25 @@ class LogPrinter():
             remaining_space: The amount of space remaining after fixed maximums
             and seperators have been taken into account."""
             dynamic_minimums = []
-            for column in trimmed_columns:
-                pcolumn = column[0]
+            fixed_minimums = []
+            for index in range(0, len(trimmed_columns)):
+                pcolumn = trimmed_columns[index][0]
                 minimum_type = dynamic_buffer[pcolumn]["minumum_type"]
                 if minumum_type == 'dynamic':
                     dynamic_minimums.append((pcolumn, pcolumn.minimum.width))
+                    trimmed_columns.pop(index)
                 elif minimum_type == 'fixed':
-                    pass
+                    fixed_minimums.append(pcolumn.minimum.width)
                 else:
                     raise ValueError("minimum_type was neither fixed or dynamic.")
+            if sum(fixed_minimums) > remaining_space:
+                raise ValueError("Length of fixed minimums exceeded remaining"
+                                 " space.")
+            elif sum(fixed_minimums) and dynamic_minimums > remaining_space:
+                raise ValueError("Length of fixed minimums left no room for"
+                                 " dynamic columns.")
+            else:
+                pass
             dynamic_minimums.sort(key=(lambda allo: allo[1]))
             smallest = dynamic_minimums[0]
             dynamic_minimums.reverse()
@@ -780,7 +799,19 @@ class LogPrinter():
                     column = self.trim_column(column, smallest, slack, 
                                               remaining_space)
                     dynamic_minimums.append(column)
-                    
+                    trimmed_allocations = []
+                    minimum_allocations = []
+                    for column in trimmed_columns:
+                        allocation = column[1]
+                        trimmed_allocations.append(allocation)
+                    for column in dynamic_minimums:
+                        allocation = column[1]
+                        minimum_allocations.append(allocation)
+                    if (sum(trimmed_allocations) + sum(minimum_allocations) 
+                        <= remaining_space):
+                        return trimmed_columns + dynamic_minimums
+                    else:
+                        pass
 
 
         def trim_space(self, dynamic_buffer, remaining_space):
@@ -802,7 +833,8 @@ class LogPrinter():
                                                        remaining_space)
             trimmed_columns = trimmed_columns_tuple[0]
             if trimmed_columns_tuple[1] is False:
-                trimmed_min_columns = self.trim_minimums(trimmed_columns,
+                trimmed_min_columns = self.trim_minimums(dynamic_buffer,
+                                                         trimmed_columns,
                                                          remaining_space)
                 return trimmed_min_columns
             else:
