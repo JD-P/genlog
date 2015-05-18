@@ -577,6 +577,7 @@ class LogPrinter():
             super()__init__(self, minimum, maximum)
             self.fixed_column_spacing = {}
             self.dynamic_column_spacing = {}
+            self.seperator = None
 
         def _print_debug(self, pcolumn_widths):
             """Print debugging info for someone to figure out what fixed columns
@@ -585,8 +586,10 @@ class LogPrinter():
             for pcolumn in pcolumns:
                 fname = pcolumn.column["fname"]
                 
+        def set_seperator(self, seperator):
+            self.seperator = str(seperator)
 
-        def add_fixed_spacing(self, pcolumn):
+        def add_fixed_spacing(self, pcolumns):
             """Add and check the space declaration to the print objects internal 
             tracker.
 
@@ -596,53 +599,216 @@ class LogPrinter():
             fixed category for a minimum or a maximum the print medium also has 
             to remember which the space allocation was based off of.
             """
-            if pcolumn.maxium.width_type == 'fixed':
-                basis = pcolumn.maximum
-                allocation = pcolumn.maximum.width
-                self.fixed_column_spacing[pcolumn] = {"basis":basis, 
-                                                      "allocation":allocation}
-            elif (pcolumn.minimum.width_type == 'fixed' and 
-                  pcolumn.maximum.width_type == 'dynamic'):
-                basis = pcolumn.minimum
-                allocation = pcolumn.minimum.width
-                self.fixed_column_spacing[pcolumn] = {"basis":basis, 
-                                                      "allocation":allocation}
-            else:
-                return False
-            fixed_max_widths = {}
-            fixed_min_widths = {}
-            for space_allocation in self.fixed_column_spacing:
-                allocation_dict = fixed_column_spacing[space_allocation]
-                if space_allocation.maximum is allocation_dict["basis"]:
-                    fname = space_allocation.column["fname"]
-                    allocation = allocation_dict["allocation"]
-                    fixed_max_widths[fname] = allocation
-                elif space_allocation.minimum is allocation_dict["basis"]:
-                    fname = space_allocation.column["fname"]
-                    allocation = allocation_dict["allocation"]
-                    fixed_min_widths[fname] = allocation
+            for pcolumn in pcolumns:
+                if pcolumn.maxium.width_type == 'fixed':
+                    basis = pcolumn.maximum
+                    allocation = pcolumn.maximum.width
+                    self.fixed_column_spacing[pcolumn] = {"basis":basis, 
+                                                          "allocation":allocation}
                 else:
-                    raise ValueError("Supposed to have fixed basis but didn't"
-                                     " pass relevant tests.")
-            if sum(fixed_max_widths.values()) > self.maximum.width:
-                pprint.pprint(fixed_max_widths)
-                raise ValueError("Length of fixed maximums exceeded constraints"
-                                 " of print medium.")
-            elif sum(fixed_min_widths.values()) > self.maximum.width:
-                pprint.pprint(fixed_min_widths)
-                raise ValueError("Length of fixed minimums exceeded constraints"
-                                 " of print medium.")
-            elif (sum(fixed_max_widths.values()) + 
-                  sum(fixed_min_widths.values())) > self.maximum.width:
-                pprint.pprint((fixed_max_widths, fixed_min_widths))
-                raise ValueError("Length of fixed minimums and fixed maximums"
-                                 " exceeded constraints of print medium.")
-            else:
-                return True
+                    return False
+                fixed_max_widths = {}
+                for space_allocation in self.fixed_column_spacing:
+                    allocation_dict = fixed_column_spacing[space_allocation]
+                    if ((space_allocation.maximum is 
+                         allocation_dict["basis"]) and 
+                         space_allocation.maximum.width != '*'):
+                        fname = space_allocation.column["fname"]
+                        allocation = allocation_dict["allocation"]
+                        fixed_max_widths[fname] = allocation
+                    else:
+                        raise ValueError("Supposed to have fixed basis but didn't"
+                                         " pass relevant tests.")
+                sep_len = ColumnTrimmer.calculate_seperator_len(ColumnTrimmer, 
+                                                                self.seperator,
+                                                                pcolumns)
+                if sum(fixed_max_widths.values()) > self.maximum.width:
+                    pprint.pprint(fixed_max_widths)
+                    raise ValueError("Length of fixed maximums exceeded constraints"
+                                     " of print medium.")
+                elif sum(fixed_max_widths.values()) + sep_len > self.maximum.width:
+                    pprint.pprint(fixed_max_widths)
+                    print("Seperator lengths:", str(sep_len))
+                    raise ValueError("Length of fixed maximums and seperators"
+                                     " exceeded constraints of print medium.")
+                elif (sum(fixed_max_widths.values()) + sep_len + len(pcolumns)
+                      > self.maximum.width):
+                    pprint.pprint(fixed_max_widths.values())
+                    print("Seperator lengths:", str(sep_len))
+                    print("Number of columns:", str(len(pcolumns)))
+                    raise ValueError("Length of fixed maximums and seperators"
+                                     " and minimum single character for each"
+                                     " column exceeded constraints of print"
+                                     " medium.")
+                else:
+                    return True
 
-        def add_dynamic_spacing(self, pcolumn):
+        def add_dynamic_spacing(self, pcolumns):
+            """Add the space declarations to the print objects internal
+            tracker.
+
+            Calculates the remaining space leftover after the fixed columns are
+            accounted for. Importantly fixed minimums do not count as taking up
+            space because their dynamic maximums must have equal or more space
+            so to count them would misrepresent how much space is remaining.
             """
-            
+            dynamic_buffer = {}
+            for pcolumn in pcolumns:
+                maximum = pcolumn.maximum.width_type
+                minimum = pcolumn.minimum.width_type
+                max_width = pcolumn.maximum.width
+                if maximum == 'dynamic' and minimum == 'dynamic':
+                    pcolumn_buffer[pcolumn] = {"minimum_type":'dynamic',
+                                               "allocation":max_width}
+                elif maximum == 'dynamic' and minimum == 'fixed':
+                    pcolumn_buffer[pcolumn] = {"minimum_type":'fixed',
+                                               "allocation":max_width}
+            fixed_max_widths = []
+            for space_allocation in self.fixed_column_spacing:
+                basis = self.fixed_column_spacing[space_allocation]["basis"]
+                if space_allocation.maximum is basis:
+                    allocation = (self.fixed_column_spacing
+                                  [space_allocation]["allocation"])
+                    fixed_max_widths.append(allocation)
+            sep_len = ColumnTrimmer.calculate_seperator_len(ColumnTrimmer,
+                                                            self.seperator,
+                                                            pcolumns)
+            remaining_space = ((self.maximum.width - sum(fixed_max_widths)) 
+                               - sep_len)
+            dynamic_spacing = []
+            for pcolumn in pcolumn_buffer:
+                dynamic_spacing.append(pcolumn_buffer[pcolumn]["allocation"])
+            if sum(dynamic_spacing) > remaining_space:
+                trimmed_columns = self.trim_space(dynamic_buffer, remaining_space)
+
+        def finalize_allocation(self):
+            """After all space allocations have been added to the internal 
+            tracker trim columns and make final preperations for printing.
+            """
+            pass
+
+    class ColumnTrimmer():
+        """Trim columns down to their proper sizing for space allocation and
+        printing."""
+        def calculate_seperator_len(self, seperator, columns):
+            """Calculate the length of the seperators given the seperator as a
+            string and its columns."""
+            if seperator:
+                seperators = len(columns) - 1
+                seperator_length = len(seperator)
+                return seperators * seperator_length
+            else:
+                return 0
+
+        def trim_column(self, column, smallest, slack, remaining_space):
+            """Trim the length of a single column."""
+            current = column[1]
+            ratio_step = (current - (current % smallest)) / smallest
+            if slack is 0:
+                 return column
+            elif slack % ratio_step == 0:
+                trimmed_allocation = column_allocation - ratio_step
+                return (column[0], trimmed_allocation)
+            elif slack % ratio_step > 0:
+                slack_difference = slack % ratio_step
+                trimmed_allocation = column_allocation - slack_difference
+                return (column[0], trimmed_allocation)
+            else:
+                raise ValueError("Somehow trim_column got a slack outside"
+                                 " it's assumed operating parameters.")
+
+        def trim_maximums(self, dynamic_buffer, remaining_space):
+            """Trim dynamic maximums until they're either below the maximum of the
+            print medium or all equivalent to the print columns minimum."""
+                pcolumn_allocations = []
+                for pcolumn in dynamic_buffer:
+                    allocation = dynamic_buffer[pcolumn]["allocation"]
+                    pcolumn_allocations.append((pcolumn, allocation))
+                pcolumn_allocations.sort(key=(lambda allo: allo[1]))
+                smallest = pcolumn_allocations[0]
+                trimmed_columns = pcolumn_allocations[:]
+                trimmed_columns.reverse()
+                stop = False
+                while stop is False:
+                    for index in range(0, len(trimmed_columns)):
+                        column = trimmed_columns.pop(index)
+                        column_allocation = column[1]
+                        min_width = column[0].minimum.width
+                        slack = column_allocation - min_width
+                        column = self.trim_column(column, smallest, slack, 
+                                                  remaining_space)
+                        trimmed_columns.append(column)
+                        allocation_buffer = []
+                        minimums = []
+                        for trim_column in trimmed_columns:
+                            minimums.append(trim_column[0].minimum.width)
+                            allocation_buffer.append(trim_column[1])
+                        if sum(allocation_buffer) <= remaining_space:
+                            return (trimmed_columns, True)
+                        elif sum(allocation_buffer) == sum(minimums):
+                            return (trimmed_columns, False)
+                        else:
+                            pass
+
+        def trim_minimums(self, trimmed_columns, remaining_space):
+            """Trim a set of dynamic minimums after they've already been trimmed
+            as dynamic maximums.
+
+            trimmed_columns: The already-trimmed columns to trim even further.
+
+            remaining_space: The amount of space remaining after fixed maximums
+            and seperators have been taken into account."""
+            dynamic_minimums = []
+            for column in trimmed_columns:
+                pcolumn = column[0]
+                minimum_type = dynamic_buffer[pcolumn]["minumum_type"]
+                if minumum_type == 'dynamic':
+                    dynamic_minimums.append((pcolumn, pcolumn.minimum.width))
+                elif minimum_type == 'fixed':
+                    pass
+                else:
+                    raise ValueError("minimum_type was neither fixed or dynamic.")
+            dynamic_minimums.sort(key=(lambda allo: allo[1]))
+            smallest = dynamic_minimums[0]
+            dynamic_minimums.reverse()
+            stop = False
+            while stop is False:
+                for index in range(0, len(dynamic_minimums)):
+                    column = dynamic_minimums.pop(index)
+                    minimum_allocation = column[1]
+                    slack = minimum_allocation - 1
+                    column = self.trim_column(column, smallest, slack, 
+                                              remaining_space)
+                    dynamic_minimums.append(column)
+                    
+
+
+        def trim_space(self, dynamic_buffer, remaining_space):
+            """If there is not enough room to give every column its dynamic
+            maximum, trim space until there is or raise error.
+
+            Dynamic minimums are absolutely prioritized over dynamic maximums.
+            What this means is that if it comes down to a choice between 
+            shortening a dynamic minimum and shortening a dynamic maximum the
+            maximum will always be shortened.
+
+            dynamic buffer: A dictionary of dynamic print columns under 
+            consideration.
+
+            remaining space: The amount of remaining space left in the print
+            medium.
+            """ 
+            trimmed_columns_tuple = self.trim_maximums(dynamic_buffer, 
+                                                       remaining_space)
+            trimmed_columns = trimmed_columns_tuple[0]
+            if trimmed_columns_tuple[1] is False:
+                trimmed_min_columns = self.trim_minimums(trimmed_columns,
+                                                         remaining_space)
+                return trimmed_min_columns
+            else:
+                return trimmed_columns
+           
+
             
     class PrintColumn(AbstractPrint):
         'Defines the line wrapping width of a single column to be printed.'
