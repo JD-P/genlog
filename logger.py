@@ -152,6 +152,7 @@ class Logger():
             settings = json.load(config)
         except ValueError:
             raise ValueError("The configuration file is corrupted or not valid JSON.")
+        config.close()
         return settings
 
     def load_log(self, logname):
@@ -539,7 +540,7 @@ class LogPrinter():
     """
     class AbstractWidth():
         """Base class for minimum and maximum widths for columns."""
-        def __init__(self, width, width_type='dynamic'):
+        def __init__(self, column, width, width_type='dynamic'):
             if width_type not in ('dynamic', 'fixed'):
                 raise ValueError("Width type" + width_type + "not a valid type.")
             elif not isinstance(width, int):
@@ -550,6 +551,7 @@ class LogPrinter():
             else:
                 self.width = width
                 self.width_type = width_type
+                self.column = column
 
     class Minimum(AbstractWidth):
         """Set the minimum width of a column in the text output.
@@ -684,17 +686,30 @@ class LogPrinter():
                 for column in trimmed_columns:
                     pcolumn = column[0]
                     allocation = column[1]
-                    columns[pcolumn] = allocation
+                    columns[pcolumn] = {"allocation":allocation}
             elif sum(dynamic_spacing) <= remaining_space:
                 columns = dynamic_buffer
             self.dynamic_column_spacing = columns
             return True
 
-        def finalize_allocation(self):
+        def reorder_columns(self, fields):
             """After all space allocations have been added to the internal 
-            tracker trim columns and make final preperations for printing.
+            tracker make final preperations for printing.
             """
-            pass
+            column_fnames = {}
+            for pcolumn in self.fixed_column_spacing:
+                fname = pcolumn.column["fname"]
+                allocation = self.fixed_column_spacing[pcolumn]["allocation"]
+                column_fnames[fname] = (pcolumn, allocation)
+            for pcolumn in self.dynamic_column_spacing:
+                fname = pcolumn.column["fname"]
+                allocation = self.dynamic_column_spacing[pcolumn]["allocation"]
+                column_fnames[fname] = (pcolumn, allocation)
+            print_columns = []
+            for field in fields:
+                fname = field["fname"]
+                print_columns.append(column_fnames[fname])
+            return print_columns
 
     class ColumnTrimmer():
         """Trim columns down to their proper sizing for space allocation and
@@ -862,10 +877,26 @@ class LogPrinter():
             """A stub to be filled in by a real function."""
             pass
 
-    def print_to(self, log, print_object):
+    def print_to(self, log, print_object, logname):
         """Print a log object given as JSON and return text formatted according
         to the properties of the given print object."""
         #routine to grab the oformat scripts and etc for each column
+        settings = Logger.readconf(Logger, logname)
+        log_oformat = Logger.getscript(Logger, settings["formatting"], logname)
+        seperator = log_oformat.seperator
+        fields = Logger.getfields(Logger, settings, logname)
+        fields_dict = {}
+        for field in fields:
+            fields_dict[field["fname"]] = field
+        column_formats = []
+        for column in log:
+            fname = column["fname"]
+            column_field = fields_dict[fname]
+            oformat = column_field.oformat
+            column_formats.append((column, oformat))
+        declarations = self.spacing_negotiation(column_formats, print_object)
+        print_medium = self.determine_widths(declarations, print_object, seperator)
+        print_columns = print_medium.reorder_columns(fields)
 
     def spacing_negotiation(self, column_formats, print_object):
         """Call the spacing declaration method of each oformat script module.
@@ -888,43 +919,23 @@ class LogPrinter():
         print_object: The print medium to prepare spacing for.
         """
         column_widths = []
-        for method in column_formats:
-            column_formats[0] = column
-            column_formats[1] = oformat
+        for column in column_formats: 
             declaration = oformat.spacing(column, column_formats, print_object)
             column_widths.append(declaration)
         return column_widths
 
-    def determine_widths(self, column_widths, print_object):
+    def determine_widths(self, column_widths, print_object, seperator):
         """Given the spacing declarations of each column and the dimensions of
         the print medium, determine how much space each column will actually get 
         to print in.
         """
-        for pcolumn in column_widths:
-            print_object.add_spacing(pcolumn)
+        print_object.set_seperator(seperator)
+        print_object.add_fixed_spacing(column_widths)
+        print_object.add_dynamic_spacing(column_widths)
+        return print_object
 
-    
-    def tlogwrt(self, entry,log):
-        """Take an entry dictionary and write out to the human readable log based on it."""
-        # Check if textlog file exists, if not write instead of append
-        tlog = open(log,'a')
-        tlog.write("----\n")
-        for lvalue in entry:
-            olabel = str(entry.get(lvalue)[1])
-            value = str(entry.get(lvalue)[0])
-            tlog.write(olabel + " " + value + "\n\n")
-        tlog.write("----\n\n")
-
-    def tlogprint(self, entry, log):
-        """Take the JSON log and print a formatted version to standard output."""
-        jlog = open(log, 'r')
-
-    def printentry(self, entry, formatting):
-        """Take a given entry and return a formatted version."""
-        for field in entry:
-            olabel = formatting.get("olabel")
-            ftag = formatting.get("oformat")
-            print()
+    def print_log(self, print_columns, log_oformat):
+        """Print a log given as print columns and a log oformat."""
 
 
 class Field():
