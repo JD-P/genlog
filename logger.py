@@ -9,7 +9,7 @@ import json
 import os
 
 
-import string
+import sys
 
 
 import argparse
@@ -25,6 +25,7 @@ import importlib
 
 
 import zipfile
+
 
 import pprint
 
@@ -934,8 +935,10 @@ class LogPrinter():
         print_object.add_dynamic_spacing(column_widths)
         return print_object
 
-    def print_log(self, print_columns, log_oformat):
+    def print_log(self, print_columns, column_formats, log_oformat):
         """Print a log given as print columns and a log oformat."""
+        for pcolumn in print_columns:
+            
 
 
 class Field():
