@@ -47,26 +47,26 @@ def option(self,options):
 class CliUtils():
     """Class object to store static methods related to the Cli interface."""
     def log(cls, flist, logname):
-    """Create an entry dictionary (edict) from the given fields and return it."""
-    edict = {}
-    for fobject in flist:
-        if fobject.flabel:
-            prompt = fobject.flabel
-        else:
-            prompt = fobject.name
-        if "on_display" in fobject.handlers.keys():
-            fobject.on_display_main.main(locals())
-        if fobject.prompt:
-            entry = False
-            while not entry:
-                inbuffer = fobject.prompt(prompt)
-                entry = fobject.validate(inbuffer)
-        if "on_input" in fobject.scripts.keys():
-            fobject.on_input_main.main(locals())
-        edict[fobject.name] = inbuffer
-    return edict
+        """Create an entry dictionary (edict) from the given fields and return it."""
+        edict = {}
+        for fobject in flist:
+            if fobject.flabel:
+                prompt = fobject.flabel
+            else:
+                prompt = fobject.name
+            if "on_display" in fobject.handlers.keys():
+                fobject.on_display_main.main(locals())
+            if fobject.prompt:
+                entry = False
+                while not entry:
+                    inbuffer = fobject.prompt(prompt)
+                    entry = fobject.validate(inbuffer)
+            if "on_input" in fobject.scripts.keys():
+                fobject.on_input_main.main(locals())
+            edict[fobject.name] = inbuffer
+        return edict
 
-    def argparse(cls, self, argument, *input_restrictions):
+    def argparse(self, obj, argument, *input_restrictions):
         """Parse the arguments given to a cmd do_ method. input_restriction takes
         dictionaries representing arguments and their restriction parameters."""
         argsplit = argument.split()
@@ -77,7 +77,7 @@ class CliUtils():
             regex = restriction["regex"]
             orientation = restriction["orientation"]
             errormsg = restriction["errormsg"]
-            if cls.validation(cls, self, arg, regex, orientation, errormsg):
+            if self.validation(self, obj, arg, regex, orientation, errormsg):
                 evaluation_results.append(arg)
                 if (argindex + 1) < len(input_restrictions):
                     argindex += 1
@@ -85,20 +85,20 @@ class CliUtils():
                 return False
         return evaluation_results
 
-    def validation(cls, self, input_line, regex, orientation, errormsg):
+    def validation(self, obj, input_line, regex, orientation, errormsg):
         """Validate a line of input given a regex and orientation for a 
         Restriction and an error message to print on failure."""
         criteria = Restriction(regex, orientation)
         if criteria.validate(input_line):
             return True
         else:
-            cls.input_error(cls, self, errormsg)
+            self.input_error(self, obj, errormsg)
             return False
 
-    def pyfile_validate(cls, self, script):
+    def pyfile_validate(self, obj, script):
         """Specifically perform validation for the name of a python file."""
-        if cls.validation(cls, 
-                          self, 
+        if self.validation(self, 
+                          obj, 
                           script,
                           "[^A-Za-z0-9._-]",
                           "discard",
@@ -106,7 +106,7 @@ class CliUtils():
                           " says that filenames should only include characters in"
                           " the regex: [A-Za-z0-9._-]"):
             if script[-3:] == ".py":
-                cls.input_error("Importing scripts will strip the .py from their"
+                self.input_error("Importing scripts will strip the .py from their"
                                  " name, you should write the script name so that"
                                  " it doesn't have its .py extension.")
                 return False
@@ -115,23 +115,23 @@ class CliUtils():
         else:
             return False
 
-    def try_catch(cls, self, prompt=">", attribute, severity):
+    def try_catch(self, obj, prompt=">", attribute, severity):
         """Implement a try catch routine to test for presence of attribute.
         Returns true if program execution should continue."""
         try:
-            getattr(self, attribute)
+            getattr(obj, attribute)
         except AttributeError:
-            cls.input_error("Attribute " + attribute + " was not filled out.")
+            self.input_error("Attribute " + attribute + " was not filled out.")
             yes = input("Would you like to fill it in now?")
             if yes == 'y' or yes == 'yes':
-                setattr(self, attribute, False)
-                while not getattr(self, attribute):
+                setattr(obj, attribute, False)
+                while not getattr(obj, attribute):
                     fill = input(prompt)
-                    func = getattr(self, "do_" + attribute)
+                    func = getattr(obj, "do_" + attribute)
                     func(fill)
                 return True
             else:
-                setattr(self, attribute, None)
+                setattr(obj, attribute, None)
 
             if severity == 0:   
                 yes = input("Discard changes and exit? y/n:")
@@ -143,27 +143,27 @@ class CliUtils():
                 return True
         return True
 
-    def input_error(cls, self, message):
+    def input_error(self, obj, message):
         """Prints an error message when input validation returns False."""
-        self.stdout.write("*** Input Error: %s\n"%message)
+        obj.stdout.write("*** Input Error: %s\n"%message)
 
-    def export_error_handler(cls, self, filepath, export_result):
+    def export_error_handler(self, obj, filepath, export_result):
         if export_result is True:
             print("All logs exported to:" + filepath)
             return True
         elif export_result == "filepath_was_directory":
-            CliUtils.input_error(cls, self, "Filepath given was directory.")
+            CliUtils.input_error(self, obj, "Filepath given was directory.")
             return False
         elif export_result == "invalid_filepath":
-            CliUtils.input_error(cls, self, "Filepath is invalid.")
+            CliUtils.input_error(self, obj, "Filepath is invalid.")
             return False
         elif export_result == "existed_no_overwrite":
             return False
         else:
-            CliUtils.input_error(cls, self, export_result)
+            CliUtils.input_error(self, obj, export_result)
             return False
 
-    def print_iterable(cls, iterable, indent):
+    def print_iterable(self, iterable, indent):
         """Pretty print items in iterable with given starting indent."""
         def is_iter(obj):
             """Determine if given object is an iterable."""
@@ -173,7 +173,7 @@ class CliUtils():
                 return False
             return True
 
-        def iter_print(cls, start, end, indent, iterable, print_callback):
+        def iter_print(self, start, end, indent, iterable, print_callback):
             """Print iterable objects according to a template. Start prints the
             beginning 'marker' for the object. (eg. A '[' for a list.) And end
             prints the ending 'marker'. (eg. A ']' for a list.) Indent says how
@@ -186,7 +186,7 @@ class CliUtils():
             print(printer_indent, start)
             for item in iterable:
                 if is_iter(item):
-                    cls.print_iterable(cls, item, (indent + 2))
+                    self.print_iterable(item, (indent + 2))
                 else:
                     print_callback(printer_indent, iterable, item) 
             print(printer_indent, end)
@@ -201,19 +201,19 @@ class CliUtils():
         printer = (lambda indent, iterable, item: print(indent, item))
         printer_indent = (' ' * (indent - 1))
         if isinstance(iterable, list):
-            iter_print(cls, "[", "]", indent, iterable, printer)
+            iter_print(self, "[", "]", indent, iterable, printer)
         elif isinstance(iterable, tuple):
-            iter_print(cls, "(", ")", indent, iterable, printer)
+            iter_print(self, "(", ")", indent, iterable, printer)
         elif isinstance(iterable, range):
             print(printer_indent, iterable)
         elif isinstance(iterable, set):
-            iter_print(cls, "{", "}", indent, iterable, printer)
+            iter_print(self, "{", "}", indent, iterable, printer)
         elif isinstance(iterable, dict):
             printer = (lambda indent, iterable, 
                        item: print(indent, str(item) + ":" + str(iterable[item])))
-            iter_print(cls, "{", "}", indent, iterable, printer)
+            iter_print(self, "{", "}", indent, iterable, printer)
         else:
-            iter_print(cls, "?", "?", indent, iterable, printer)
+            iter_print(self, "?", "?", indent, iterable, printer)
         return True
 
 
