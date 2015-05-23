@@ -31,9 +31,6 @@ import sys
 import argparse
 
 
-import cmd
-
-
 import re
 
 
@@ -67,25 +64,7 @@ class Logger():
         sys.path.pop() 
         sys.modules = oldcache
         return script
-        
 
-    def main(self):
-        """Handle command line arguments, determine which interface to use and cede control to it."""
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-p","--print",default=False,help='Print the text log to standard output.')
-        parser.add_argument("-i","--interface",default='cli',help='Specify which interface to use. Valid options: cli')
-        args = parser.parse_args()
-        if args.print:
-            self.tlogprint(args.print)
-            return 0
-        elif args.interface == 'cli':
-            global log
-            log = Logger(CliInterface())
-            CliInterface.cli_main()
-        elif args.interface == 'gui':
-            print("No GUI interface available at this time.")
-        else:
-            raise ValueError("Interface somehow not present.")
 
     def getfields(self, settings, logname):
         """Extract the fields from a logger settings.conf file and convert them
@@ -324,20 +303,20 @@ class Logger():
         logname of the local logger."""
         contain_dir = self.search_tree('_scripts', script, logname)
         if not contain_dir:
-            raise ValueError(("No script by name " + script + "in local or global")
+            raise ValueError("No script by name " + script + "in local or global"
                              " namespace.")
         imported_script = self.import_from_path(script, contain_dir)
         return imported_script
 
     def verify_logname(self, logname):
-    """Verify that the user typed in a valid logname."""
-    paths = Logger.genpaths(logname)
-    confdir = paths["confdir"]
-    # Check to make sure that user implemented a real directory name
-    if os.path.isdir(confdir + logname):
-        return True
-    else:
-        return False
+        """Verify that the user typed in a valid logname."""
+        paths = Logger.genpaths(logname)
+        confdir = paths["confdir"]
+        # Check to make sure that user implemented a real directory name
+        if os.path.isdir(confdir + logname):
+            return True
+        else:
+            return False
 
     def mklogtemplate(self, logname, settings):
         """Make a new log template in the .loggers directory."""
@@ -584,7 +563,7 @@ class LogPrinter():
 
     class AbstractPrint():
         """Base class for print objects such as logs and columns."""
-        def __init__(self, minimum, maximum)::
+        def __init__(self, minimum, maximum):
             if minimum.width > maximum.width:
                 raise ValueError("Minimum was greater than Maximum.")
             self.minimum = minimum
@@ -593,7 +572,7 @@ class LogPrinter():
     class PrintLog(AbstractPrint):
         'Defines the line wrapping width and dimensions of a log output medium.'
         def __init__(self, minimum, maximum):
-            super()__init__(self, minimum, maximum)
+            super().__init__(self, minimum, maximum)
             self.fixed_column_spacing = {}
             self.dynamic_column_spacing = {}
             self.seperator = None
@@ -761,35 +740,35 @@ class LogPrinter():
         def trim_maximums(self, dynamic_buffer, remaining_space):
             """Trim dynamic maximums until they're either below the maximum of the
             print medium or all equivalent to the print columns minimum."""
-                pcolumn_allocations = []
-                for pcolumn in dynamic_buffer:
-                    allocation = dynamic_buffer[pcolumn]["allocation"]
-                    pcolumn_allocations.append((pcolumn, allocation))
-                pcolumn_allocations.sort(key=(lambda allo: allo[1]))
-                smallest = pcolumn_allocations[0]
-                trimmed_columns = pcolumn_allocations[:]
-                trimmed_columns.reverse()
-                stop = False
-                while stop is False:
-                    for index in range(0, len(trimmed_columns)):
-                        column = trimmed_columns.pop(index)
-                        column_allocation = column[1]
-                        min_width = column[0].minimum.width
-                        slack = column_allocation - min_width
-                        column = self.trim_column(column, smallest, slack, 
-                                                  remaining_space)
-                        trimmed_columns.append(column)
-                        allocation_buffer = []
-                        minimums = []
-                        for trim_column in trimmed_columns:
-                            minimums.append(trim_column[0].minimum.width)
-                            allocation_buffer.append(trim_column[1])
-                        if sum(allocation_buffer) <= remaining_space:
-                            return (trimmed_columns, True)
-                        elif sum(allocation_buffer) == sum(minimums):
-                            return (trimmed_columns, False)
-                        else:
-                            pass
+            pcolumn_allocations = []
+            for pcolumn in dynamic_buffer:
+                allocation = dynamic_buffer[pcolumn]["allocation"]
+                pcolumn_allocations.append((pcolumn, allocation))
+            pcolumn_allocations.sort(key=(lambda allo: allo[1]))
+            smallest = pcolumn_allocations[0]
+            trimmed_columns = pcolumn_allocations[:]
+            trimmed_columns.reverse()
+            stop = False
+            while stop is False:
+                for index in range(0, len(trimmed_columns)):
+                    column = trimmed_columns.pop(index)
+                    column_allocation = column[1]
+                    min_width = column[0].minimum.width
+                    slack = column_allocation - min_width
+                    column = self.trim_column(column, smallest, slack, 
+                                              remaining_space)
+                    trimmed_columns.append(column)
+                    allocation_buffer = []
+                    minimums = []
+                    for trim_column in trimmed_columns:
+                        minimums.append(trim_column[0].minimum.width)
+                        allocation_buffer.append(trim_column[1])
+                    if sum(allocation_buffer) <= remaining_space:
+                        return (trimmed_columns, True)
+                    elif sum(allocation_buffer) == sum(minimums):
+                        return (trimmed_columns, False)
+                    else:
+                        pass
 
         def trim_minimums(self, dynamic_buffer, trimmed_columns, remaining_space):
             """Trim a set of dynamic minimums after they've already been trimmed
@@ -877,7 +856,7 @@ class LogPrinter():
     class PrintColumn(AbstractPrint):
         'Defines the line wrapping width of a single column to be printed.'
         def __init__(self, minimum, maximum, column):
-            super()__init__(self, minimum, maximum)
+            super().__init__(self, minimum, maximum)
             self.column = column
 
     class OutputFormat():
@@ -1031,9 +1010,13 @@ class Field():
         return Logger.get_script(Logger, script, logname)
         
     def unpack_scripts(self, 
-                       scripts=self.scripts,
-                       logname=self.logname):
+                       scripts=None,
+                       logname=None):
         """Unpack given scripts and assign them as methods of field object."""
+        if not scripts:
+            scripts = self.scripts
+        if not logname:
+            logname = self.logname
         for scriptkey in scriptnames:
             scriptname = scriptnames[scriptkey]
             if scriptname:
@@ -1053,7 +1036,7 @@ class Restriction():
     
     def validate(line):
         """Validate a line of input by matching it against the regex."""
-        if self.regex = None:
+        if self.regex == None:
             return True
         restrictions = re.compile(self.regex)
         match = restrictions.search(line)
@@ -1063,5 +1046,3 @@ class Restriction():
             return True
         else:
             return False
-
-Logger.main()
