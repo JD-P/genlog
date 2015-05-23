@@ -16,15 +16,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 from logger import Logger, LogPrinter, Field, Restriction
 
-def main():
-    """Control the interface and operate the logger."""
-    logger = log.interface.uselogger()
-    settings = log.readconf(logger) # Retrieve the configuration from settings.conf
-    flist = log.getfields(settings) # Create a fieldlist from the fields given in settings.conf
-    entry = log.interface.log(flist) # Create an entry from the fields given in fieldlist
-    log.jlogwrt(entry,settings.get("jsonpath")) # Write out the new entry to the log file
-    log.tlogwrt(entry,settings.get("txtpath")) # Write out the new entry to a human readable text file
-    return 0
+import cmd
 
 def option(self,options):
     """Take a dictionary of options and present these as choices to the user, return the selected options value."""
@@ -115,7 +107,7 @@ class CliUtils():
         else:
             return False
 
-    def try_catch(self, obj, prompt=">", attribute, severity):
+    def try_catch(self, obj, attribute, severity, prompt=">"):
         """Implement a try catch routine to test for presence of attribute.
         Returns true if program execution should continue."""
         try:
@@ -449,7 +441,7 @@ class CliMkLogTemplate(cmd.Cmd):
         """Verify that at least one field has been specified and warns on unset
         attributes. Takes no arguments."""
         if self.fields:
-            CliUtils.try_catch(CliUtils, self, self.prompt, "formatting", 1)
+            CliUtils.try_catch(CliUtils, self, "formatting", 1, self.prompt)
             self.settings["fields"] = self.fields
             Logger.mklogtemplate(Logger, self.logname, self.settings)
             print("Log template written! Returning to main menu...")
