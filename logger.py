@@ -914,6 +914,8 @@ class LogPrinter():
         declarations = self.spacing_negotiation(column_formats, print_object)
         print_medium = self.determine_widths(declarations, print_object, seperator)
         print_columns = print_medium.reorder_columns(fields)
+        formatted_output = self.print_log(print_columns, column_formats, log_oformat)
+        return formatted_output
 
     def spacing_negotiation(self, column_formats, print_object):
         """Call the spacing declaration method of each oformat script module.
@@ -953,7 +955,23 @@ class LogPrinter():
 
     def print_log(self, print_columns, column_formats, log_oformat):
         """Print a log given as print columns and a log oformat."""
-        for pcolumn in print_columns:
+        formatted_columns = []
+        for index in range(0, len(print_columns)):
+            pcolumn = print_columns[index]
+            pcolumn_fname = pcolumn.column["fname"]
+            column = column_formats[index][0]
+            oformat_fname = column["fname"]
+            oformat = column_formats[index][1]
+            seperator = log_oformat.seperator
+            if pcolumn_fname == oformat_fname:
+                formatted_data = oformat.format(column, pcolumn, seperator)
+                formatted_columns.append({"fname":column["fname"],
+                                          "olabel":column["olabel"],
+                                          "data":formatted_data})
+            else:
+                raise Exception("Data corruption detected in print_log.")
+        formatted_output = log_oformat.format(formatted_columns)
+        return formatted_output
             
 
 
