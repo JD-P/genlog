@@ -233,10 +233,18 @@ class Logger():
                 filtered_logs.append(logname)
         return filtered_logs
 
-    def available_fields(self, logger):
+    def available_ftypes(self, logger=""):
         """Return the available field types."""
         paths = self.genpaths(self, logger)
-        
+        if logger:
+            ftypes_dir = paths["logdir"] + "_ftypes"
+        else:
+            ftypes_dir = paths["confdir"] + "_ftypes"
+        ftypes = os.listdir(ftypes_dir)
+        filtered_ftypes = []
+        for ftype in ftypes:
+            filtered_ftypes.append(ftype.split(".json")[0])
+        return filtered_ftypes
 
     def search_tree(self, tree, search_name, logname):
         """Search a given tree for a given name. Trees are the abstract search
