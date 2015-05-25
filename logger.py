@@ -125,21 +125,14 @@ class Logger():
 
     def readconf(self, logger):
         """Read the configuration file at ~/.loggers/<LOGGER>/settings.conf and return the settings."""
-        paths = self.genpaths(logger)
+        paths = self.genpaths(self, logger)
         # If config file already exists, read from it. If not, create it.
         # If directory for loggers doesn't exist, create it.
         try:
             config = open(paths["confpath"], 'r')
         except IOError:
-            if os.path.isdir(paths["logdir"]):
-
-                settings = {"jsonpath":paths["jsonpath"], "txtpath":paths["txtpath"]}
-                json.dump(settings, config)
-                config.close()
-                return settings
-            else:
-                os.makedirs(paths["logdir"])
-                self.readconf()
+            os.makedirs(paths["logdir"])
+            self.readconf(logger)
         # Verify the config file is valid JSON
         try:
             settings = json.load(config)
@@ -222,6 +215,20 @@ class Logger():
         jlist = [edict]
         json.dump(jlist,jlog)
         quit()
+
+    def available_logs(self):
+        """Return a list of available logs. Takes no arguments, returns a list
+        of strings."""
+        paths = self.genpaths(self, "placeholder")
+        confdir = paths["confdir"]
+        templates = os.listdir(confdir)
+        filtered_logs = []
+        for logname in templates:
+            if logname[0] == '_':
+                pass
+            else:
+                filtered_logs.append(logname)
+        return filtered_logs
 
     def available_fields(self, logger):
         """Return the available field types."""
@@ -307,7 +314,7 @@ class Logger():
 
     def verify_logname(self, logname):
         """Verify that the user typed in a valid logname."""
-        paths = Logger.genpaths(logname)
+        paths = Logger.genpaths(Logger, logname)
         confdir = paths["confdir"]
         # Check to make sure that user implemented a real directory name
         if os.path.isdir(confdir + logname):
@@ -1031,7 +1038,7 @@ class Restriction():
         self.regex = regex
         self.onmatch = onmatch
     
-    def validate(line):
+    def validate(self, line):
         """Validate a line of input by matching it against the regex."""
         if self.regex == None:
             return True
