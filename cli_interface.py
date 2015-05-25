@@ -176,6 +176,10 @@ class CliUtils():
             """
             printer_indent = (' ' * (indent - 1))
             print(printer_indent, start)
+            # Prevent an iterable that yields itself from eating the stack.
+            if len(iterable) is 1 and iterable[0] == iterable:
+                print_callback(printer_indent, iterable, item)
+                return True
             for item in iterable:
                 if is_iter(item):
                     self.print_iterable(self, item, (indent + 2))
@@ -186,6 +190,9 @@ class CliUtils():
         if not is_iter(iterable):
             print(iterable)
             return False
+        elif isinstance(iterable, str):
+            print(iterable)
+            return True
         elif not isinstance(indent, int):
             raise ValueError("Indent given was not an integer. Only whole number"
                              "s can be used as indents.")
