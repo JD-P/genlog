@@ -218,6 +218,7 @@ class CliUtils():
 
 class CliMainMenu(cmd.Cmd):
     """Implements a command line main menu for the generic logger."""
+    prompt = "(GenLogMenu)>"
     def do_list(self, arg):
         """List all the log templates stored in the system. Takes no arguments."""
         templates = Logger.available_logs(Logger)
@@ -471,6 +472,7 @@ class CliFieldEditor(cmd.Cmd):
     def __init__(self, logger):
         """Set the name of the logger being created.""" 
         super().__init__()
+        self.prompt = "(MkField)>"
         self.logger = logger
         self.scripts = {}
 
