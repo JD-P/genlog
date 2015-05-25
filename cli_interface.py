@@ -218,7 +218,7 @@ class CliUtils():
 
 class CliMainMenu(cmd.Cmd):
     """Implements a command line main menu for the generic logger."""
-    prompt = "(GenLogMenu)>"
+    prompt = "(GenLogMenu)> "
     def do_list(self, arg):
         """List all the log templates stored in the system. Takes no arguments."""
         templates = Logger.available_logs(Logger)
@@ -281,7 +281,7 @@ class CliLogMenu(cmd.Cmd):
         """Store given logname and run init of parent."""
         super().__init__()
         self.logger = logname
-        self.prompt = ("(" + logname + ")" + ">")
+        self.prompt = ("(" + logname + ")" + "> ")
         settings = Logger.readconf(Logger, self.logger)
         self.fields = Logger.getfields(Logger, settings, self.logger)
         self.log = Logger.load_log(Logger, logger)
@@ -400,7 +400,7 @@ class CliMkLogTemplate(cmd.Cmd):
         super().__init__()
         self.logname = logname
         self.fields = []
-        self.prompt = "(MkTemplate)>"
+        self.prompt = "(MkTemplate)> "
         self.settings = {}
 
     def do_status(self, arg):
@@ -472,7 +472,7 @@ class CliFieldEditor(cmd.Cmd):
     def __init__(self, logger):
         """Set the name of the logger being created.""" 
         super().__init__()
-        self.prompt = "(MkField)>"
+        self.prompt = "(MkField)> "
         self.logger = logger
         self.scripts = {}
 
