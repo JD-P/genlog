@@ -222,8 +222,12 @@ class CliMainMenu(cmd.Cmd):
     def do_list(self, arg):
         """List all the log templates stored in the system. Takes no arguments."""
         templates = Logger.available_logs(Logger)
-        for template in templates:
-            print(template)
+        if templates:
+            for template in templates:
+                print(template)
+        else:
+            print("No log templates installed on this system. Create one with"
+                  " the 'new' command from this menu.")
 
     def do_use(self, logname):
         """Use the logger given as argument: USE <LOGNAME>"""
