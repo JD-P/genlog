@@ -245,7 +245,7 @@ class CliMainMenu(cmd.Cmd):
             if Logger.verify_logname(Logger, logname):
                 log = CliLogMenu(logname)
                 log.cmdloop("Logger: Type 'new' for new entry, 'help' for more" 
-                            " options.")
+                            " options.\n\n")
                 return False
 
     def do_new(self, logname):
@@ -256,11 +256,13 @@ class CliMainMenu(cmd.Cmd):
                                "[^A-Za-z]", 
                                'discard', 
                                "Non-alphabet character in logname."):
+            if logname == '':
+                CliUtils.input_error(CliUtils, self, 
+                                     "No name was given for new logger.")
+                return False
             new_log = CliMkLogTemplate(logname)
             new_log.cmdloop(logname.capitalize() + ":" + " Type 'add' to create"
-                            " a new log entry. Type 'view' to look at an old one"
-                            ". Type 'edit' to make changes to an entry that's"
-                            " already been made and 'help' for more options.")
+                            " a new log template and 'help' for more options.\n\n")
             return False
 
     def do_export(self, filepath):
@@ -574,6 +576,17 @@ class CliFieldEditor(cmd.Cmd):
         """Set the output label of the field/column: olabel <olabel>"""
         # Olabel has no input restrictions.
         self.olabel = olabel
+
+    def do_list_ftypes(self, arg):
+        """List the global ftypes on the system. Takes no arguments."""
+        ftypes = Logger.available_ftypes(Logger)
+        if not ftypes:
+            print("No ftypes were found in the global field type directory."
+                  " Something is wrong with your installation of Genlog.")
+        else:
+            for ftype in ftypes:
+                print(ftype)
+        return False
 
     def do_type(self, ftype):
         """Set the field type of the field/column: type <ftype>"""
