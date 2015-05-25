@@ -12,19 +12,15 @@ most of this through execution hooks that make the program highly user extensibl
 
 Until it's done though, this readme is my todo list:
 
-1. Remove the 'main' functionality in both logger.py and cli_interface.py and
-move this sort of handling into a 'boot_interface.py' that lets features of the
-program be accessed from a command line invocation.
-
-2. Remove the 'options' function in cli_interface.py and replace it with a 
+1. Remove the 'options' function in cli_interface.py and replace it with a 
 suitable field template and script.
 
-3. Finish the log printing functionality.
-
-4. Add 'reload' functionality so that log entries can be edited and field 
+2. Add 'reload' functionality so that log entries can be edited and field 
 templates can be edited.
 
-5. Write a manual explaining the data model, use model, and operation of the 
+3. Write a manual explaining the data model, use model, and operation of the 
 program.
 
-6. Replace print_iterable with pprint.
+4. Add support for unbounded maximums.
+
+5. Rewrite loginit in logger.py
