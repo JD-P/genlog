@@ -193,15 +193,15 @@ class Logger():
         jlog.close()
         return 0
 
-    def genpaths(self, logger):
-        """Build the paths, confdir is used to check for errors."""
+    def genpaths(self, logger="_Placeholder"):
+        """Build the paths used frequently so that they're not stored as string 
+        literals."""
         paths = {}
         paths["homedir"] = os.path.expanduser("~")
         paths["confdir"] = os.path.join(paths["homedir"], ".loggers/")
         paths["logdir"] = os.path.join(paths["confdir"], logger)
         paths["confpath"] = os.path.join(paths["logdir"], "settings.conf")
         paths["jsonpath"] = os.path.join(paths["logdir"], (logger + "-log.json"))
-        paths["txtpath"] = os.path.join(paths["homedir"], "Documents/", (logger + "-log.txt"))
         return paths
 
     def loginit(self, jsonpath):
@@ -232,8 +232,8 @@ class Logger():
 
     def available_fields(self, logger):
         """Return the available field types."""
-        # In what namespace? O_o
-        pass
+        paths = self.genpaths(self, logger)
+        
 
     def search_tree(self, tree, search_name, logname):
         """Search a given tree for a given name. Trees are the abstract search
