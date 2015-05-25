@@ -221,7 +221,10 @@ class Logger():
         of strings."""
         paths = self.genpaths(self, "placeholder")
         confdir = paths["confdir"]
-        templates = os.listdir(confdir)
+        try:
+            templates = os.listdir(confdir)
+        except IOError:
+            os.mkdir(confdir)
         filtered_logs = []
         for logname in templates:
             if logname[0] == '_':
