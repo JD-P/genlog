@@ -178,7 +178,7 @@ class CliUtils():
             print(printer_indent, start)
             for item in iterable:
                 if is_iter(item):
-                    self.print_iterable(item, (indent + 2))
+                    self.print_iterable(self, item, (indent + 2))
                 else:
                     print_callback(printer_indent, iterable, item) 
             print(printer_indent, end)
@@ -213,20 +213,23 @@ class CliMainMenu(cmd.Cmd):
     """Implements a command line main menu for the generic logger."""
     def do_list(self, arg):
         """List all the log templates stored in the system. Takes no arguments."""
-        paths = Logger.genpaths("placeholder")
-        confdir = paths["confdir"]
-        templates = os.listdir(confdir)
+        templates = Logger.available_logs(Logger)
         for template in templates:
             print(template)
 
     def do_use(self, logname):
         """Use the logger given as argument: USE <LOGNAME>"""
-        if CliUtils.validation(CliUtils,
-                               self,
-                               logname, 
-                               "[^A-Za-z]", 
-                               'discard', 
-                               "Non-alphabet character in logname."):
+        if not CliUtils.validation(CliUtils,
+                                   self,
+                                   logname, 
+                                   "[^A-Za-z]", 
+                                   'discard', 
+                                   "Non-alphabet character in logname."):
+            return False
+        elif logname == '':
+            CliUtils.input_error(CliUtils, self, "Didn't give a logname.")
+            return False
+        else:
             if Logger.verify_logname(Logger, logname):
                 log = CliLogMenu(logname)
                 log.cmdloop("Logger: Type 'new' for new entry, 'help' for more" 
@@ -536,7 +539,7 @@ class CliFieldEditor(cmd.Cmd):
                           "scripts",
                           "oformat",
                           "search"]:
-            print_status(printable)
+            print_status(self, printable)
         return False
             
         
