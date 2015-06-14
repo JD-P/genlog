@@ -43,19 +43,22 @@ class CliUtils():
         edict = {}
         for fobject in flist:
             if fobject.flabel:
-                prompt = fobject.flabel
+                flabel = fobject.flabel
             else:
-                prompt = fobject.name
+                flabel = fobject.name
             if "on_display" in fobject.handlers.keys():
-                fobject.on_display_main.main(locals())
+                fobject.on_display.main('cli', fobject)
             if fobject.prompt:
                 entry = False
                 while not entry:
-                    inbuffer = fobject.prompt(prompt)
-                    entry = fobject.validate(inbuffer)
+                    inbuffer = fobject.prompt.main('cli', flabel)
+                    if fobject.validate:
+                        entry = fobject.validate(inbuffer["line"])
+                    else:
+                        entry = True
             if "on_input" in fobject.scripts.keys():
-                fobject.on_input_main.main(locals())
-            edict[fobject.name] = inbuffer
+                inbuffer = fobject.on_input.main('cli', inbuffer)
+            edict[fobject.name] = inbuffer["line"]
         return edict
 
     def argparse(self, obj, argument, *input_restrictions):
@@ -480,7 +483,20 @@ class CliFieldEditor(cmd.Cmd):
         super().__init__()
         self.prompt = "(MkField)> "
         self.logger = logger
-        self.scripts = {}
+        # % is in layer attribute so that event names can't conflict with it
+        self.field_attributes = {}
+        self.field_attributes['scripts'] = {"%layer":1}
+        for method in dir(CliFieldEditor):
+            if method[0:3] == 'do_':
+                method_func = getattr(method, CliFieldEditor)
+                attribute = method_func(CliFieldEditor)
+                if attribute:
+                    key = attribute[0]
+                    severity = attribute[1]
+                    self.field_attributes[key] = {"value":None, "severity":severity, 
+                                                  "fill_method":method_func}
+                else:
+                    pass
 
 
     def cmdloop(self, intro=None):
@@ -534,51 +550,53 @@ class CliFieldEditor(cmd.Cmd):
                 except ImportError:
                     pass
 
-    def do_status(self, arg):
+    def add_field_attribute(key, value, severity):
+        """Add a field attribute to the field. If already present overwrites."""
+        self.field_attributes[key] = {"value":value, "severity":severity}
+
+    def do_status(self, arg=None):
         """Print the status of attributes in the field, takes no arguments:
         status"""
-        def print_status(self, printable):
-            try:
-                attribute = getattr(self, printable)
-                CliUtils.print_iterable(CliUtils, printable, 4)
-            except AttributeError:
-                print((printable + ":"), "Not set.")
-
-        for printable in ["name", 
-                          "flabel", 
-                          "olabel", 
-                          "type",
-                          "prompt",
-                          "restrictions", 
-                          "onmatch",
-                          "scripts",
-                          "oformat",
-                          "search"]:
-            print_status(self, printable)
+        if arg is None:
+            return None
+        CliUtils.print_iterable(CliUtils, self.field_attributes, 4)
         return False
             
         
 
-    def do_name(self, name):
+    def do_name(self, name=None):
         """Set the name of the field/column: name <name>"""
+        if name is None:
+            return ["name", "mand"]
         if self.validation(name, 
                       "[^A-Za-z]", 
                       'discard', 
                       "Non-alphabet character in fname."):
-            self.name = name
+            self.add_field_attribute("name", name, "mand")
+            return True
+        else:
+            return False
 
-    def do_flabel(self, flabel):
+    def do_flabel(self, flabel=None):
         """Set the field label of the field/column: flabel <flabel>"""
         # Flabel has no input restrictions.
-        self.flabel = flabel
+        if flabel is None:
+            return ["flabel", "warn"]
+        self.add_field_attribute("flabel", flabel, "warn")
+        return True
 
-    def do_olabel(self, olabel):
+    def do_olabel(self, olabel=None):
         """Set the output label of the field/column: olabel <olabel>"""
         # Olabel has no input restrictions.
-        self.olabel = olabel
+        if olabel is None:
+            return ["olabel", "warn"]
+        self.add_field_attribute("olabel", olabel, "warn")
+        return True
 
-    def do_list_ftypes(self, arg):
+    def do_list_ftypes(self, arg=None):
         """List the global ftypes on the system. Takes no arguments."""
+        if arg is None:
+            return None
         ftypes = Logger.available_ftypes(Logger)
         if not ftypes:
             print("No ftypes were found in the global field type directory."
@@ -588,47 +606,60 @@ class CliFieldEditor(cmd.Cmd):
                 print(ftype)
         return False
 
-    def do_type(self, ftype):
+    def do_type(self, ftype=None):
         """Set the field type of the field/column: type <ftype>"""
-        paths = Logger.genpaths(self.logger)
-        ftypepath = os.path.join(paths["logdir"], "types.json")
-        ftypes = json.load(ftypepath)
-        try:
-            self.type = ftypes[ftype]
-        except KeyError:
-            self.input_error("Type given as argument was not a valid type in types.json")
-
-    def do_prompt(self, script):
+        if ftype is None:
+            return ["type", "mand"]
+        if Logger.get_ftype(Logger, ftype, self.logname):
+            self.add_field_attribute("type", ftype, "mand")
+            return True
+        elif Logger.get_ftype(Logger, ftype):
+            self.add_field_attribute("type", ftype, "mand")
+            return True
+        else:
+            self.input_error("Type given as argument was not a valid type in _ftypes")
+            return False
+    def do_prompt(self, script=None):
         """Set the script that displays the prompt for user input. Use no 
         arguments to set to None: prompt <script>"""
+        if script is None:
+            return ["prompt", "warn"]
         if script == '':
-            self.prompt = "no_prompt"
-            return False
+            self.field_attributes["scripts"]["prompt"] = {"value":None, "severity":"warn"}
+            return True
         else:
             if CliUtils.pyfile_validate(CliUtils, self, script):
-                self.scripts["prompt"] = script
-                self.prompt = True
-                return False
+                self.field_attributes["scripts"]["prompt"] = {"value":script, "severity":"warn"}
+                return True
             else:
                 return False
 
-    def do_restrictions(self, restrictions):
+    def do_restrictions(self, restrictions=None):
         """Set the regex of the field/column: restrictions <regex>"""
         # Regex has no input restrictions but is allowed to be wrong.
-        self.restrictions = restrictions
-
-    def do_onmatch(self, onmatch):
+        if restrictions is None:
+            return ["restrictions", "warn"]
+        self.add_field_attribute("restrictions", restrictions, "warn")
+        return True
+    
+    def do_onmatch(self, onmatch=None):
         """Set whether strings should match or not match restriction regex,
         valid values are 'keep' and 'discard': onmatch <keep|discard>"""
+        if onmatch is None:
+            return ["onmatch", "warn"]
         if self.validation(onmatch,
                            "keep|discard",
                            "keep",
                            "Argument given was not 'keep' or 'discard'."):
-            self.onmatch = onmatch
-
-    def do_add_handler(self, args):
+            self.add_field_attribute("onmatch", onmatch, "warn")
+            return True
+        else:
+            return False
+    def do_add_handler(self, args=None):
         """Set the script <script> that handles the event <event>: add_handler
         <event> <script>"""
+        if args is None:
+            return None
         argsplit = args.split()
         event = argsplit[0]
         script = argsplit[1]
@@ -643,18 +674,27 @@ class CliFieldEditor(cmd.Cmd):
                                "discard", 
                                "Event names can only have alphabetic"
                                " characters and underscores."): 
-            self.scripts[event] = script
-            return False
+            self.field_attributes["scripts"][event] = {"value":script, "severity":"warn"}
+            return True
         else:
             return False
 
-    def do_rm_handler(self, event):
+    def do_rm_handler(self, event=None):
         """Remove the handler given by event: rm_handler <event>"""
-        self.scripts.pop(event)
-        return False
+        if event is None:
+            return None
+        try:
+            self.field_attributes["scripts"].pop(event)
+        except KeyError:
+            self.input_error("Event name given was not associated with any"
+                             " script.")
+            return False
+        return True
 
-    def do_oformat(self, script):
+    def do_oformat(self, script=None):
         """Set the script that is used to format the field for text output: oformat <scriptname>"""
+        if script is None:
+            return ["oformat", "warn"]
         if self.validation(script,
                            "[^A-Za-z0-9._-]",
                            "discard",
@@ -665,12 +705,17 @@ class CliFieldEditor(cmd.Cmd):
                 self.input_error("Importing scripts will strip the .py from their"
                                  " name, you should write the script name so that"
                                  " it doesn't have its .py extension.")
+                return False
             else:
-                self.scripts["oformat"] = script
-                self.oformat = True
+                self.scripts["oformat"] = {"value":script, "severity":warn}
+                return True
+        else:
+            return False
 
-    def do_search(self, script):
+    def do_search(self, script=None):
         """Set the script that is used to search data in this column: search <scriptname>"""
+        if script is None:
+            return ["search", "warn"]
         if self.validation(script,
                            "[^A-Za-z0-9._-]",
                            "discard",
@@ -681,78 +726,111 @@ class CliFieldEditor(cmd.Cmd):
                 self.input_error("Importing scripts will strip the .py from their"
                                  " name, you should write the script name so that"
                                  " it doesn't have its .py extension.")
+                return False
             else:
-                self.scripts["search"] = script
-                self.search = True
+                self.scripts["search"] = {"value":script, "severity":"warn"}
+                return True
+        else:
+            return False
 
     def do_finalize(self, arg):
         """Finish and save field. Makes sure that mandatory attributes are filled 
         out, warns on others."""
-        def try_catch(attribute, severity):
-            """Implement a try catch routine to test for presence of attribute.
-            Returns true if program execution should continue."""
-            try:
-                getattr(self, attribute)
-            except AttributeError:
-                self.input_error("Attribute " + attribute + " was not filled out.")
-                yes = input("Would you like to fill it in now?")
-                if yes == 'y' or yes == 'yes':
-                    setattr(self, attribute, False)
-                    while not getattr(self, attribute):
-                        fill = input(self.prompt)
-                        func = getattr(self, "do_" + attribute)
-                        func(fill)
-                    return True
-                else:
-                    setattr(self, attribute, None)
+        def correct_unset(unset_attribute, severity, fill_method):
+            """Try correcting an unset field attribute. If user declines to set,
+            skip it or quit to field editor or main menu. Returns true if program 
+            execution should continue."""
+            self.input_error("Attribute '" + unset_attribute + 
+                             "' was not filled out.")
+            yes = input("Would you like to fill it in now?")
+            if yes == 'y' or yes == 'yes':
+                filled = False
+                while not filled:
+                    fill = input(self.prompt)
+                    filled = fill_method(fill)
+                return True
+            else:
+                pass
 
-                if severity == 0:   
-                    yes = input("Discard changes and exit? y/n:")
-                    if yes == 'y' or yes == 'yes':
-                        return 'discard_exit'
-                    else:
-                        return 'main_exit'
+            if severity == 'mand':   
+                yes = input("Discard changes and exit? y/n:")
+                if yes == 'y' or yes == 'yes':
+                    return 'discard_exit'
                 else:
-                    return True
+                    return 'main_exit'
+            else:
+                return True
             return True
+
+        def warn_layer(layer_dict):
+            """Recursively take each layer of a field attribute dictionary 
+            and create a dictionary unset which lists all the field attributes
+            registered at initialization of the field editor that weren't set.
+            For each one that's not set the attribute name, the severity and the
+            method that would be used to fill it in are recorded so that the next
+            stage of the finalization process can ask the user to fill them in,
+            skip them or exit.
+            """
+            unset = {"mand":[], "warn":[]}
+            for f_attribute in layer_dict:
+                attribute_dict = layer_dict[f_attribute]
+                if isinstance(attribute_dict, dict):
+                    if '%layer' in attribute_dict.keys():
+                        attribute_dict.pop('%layer')
+                        unset_next = warn_layer(layer_dict)
+                        unset["mand"] = unset["mand"] + unset_next["mand"]
+                        unset["warn"] = unset["warn"] + unset_next["warn"]
+                    else:
+                        if attribute_dict["value"] is None:
+                            severity = attribute_dict["severity"]
+                            fill_function = attribute_dict["fill_method"]
+                            unset[severity].append({"attribute":f_attribute,
+                                                    "fill_method":fill_method})
+            return unset
+
+        def prepare_fdict(field_attributes):
+            """Recursively extract attributes from self.field_attributes
+            and return the resulting dictionary."""
+            fdict = {}
+            for attribute in field_attributes:
+                attribtue_dict = fdict[attribute]
+                if isinstance(attribute_dict, dict):
+                    if '%layer' in attribute_dict.keys():
+                        prepare_fdict(attribute_dict)
+                    else:
+                        self.fdict[attribute] = attribute_dict["value"]
+                else:
+                    self.fdict[attribute] = attribute_dict
+            return self.fdict
+                    
+
+        unset = warn_layer(self.field_attributes)
+        for warn_severity in unset:
+            for warning in warn_severity:
+                field_attribute = warning["attribute"]
+                fill_method = warning["fill_method"]
+                warn_result = correct_unset(field_attribute, warn_severity, 
+                                            fill_method)
+                if warn_result == 'discard_exit':
+                    return 'end_loop'
+                elif warn_result == 'main_exit':
+                    return False
+                else:
+                    pass
+        self.fdict = prepare_fdict(self.field_attributes)
+                    
         
-        # Mandatory attributes
-        mandatory_sev = 0
-        name = try_catch("name", mandatory_sev)
-        if name == 'discard_exit':
+
+    def postcmd(self, stop, line):
+        """Defines the stop return value for this cmdloop as 'end_loop'."""
+        if stop == 'end_loop':
             return True
-        elif name == 'main_exit':
+        else:
             return False
-        ftype = try_catch("type", mandatory_sev)
-        if ftype == 'discard_exit':
-            return True
-        elif ftype == 'main_exit':
-            return False
-        prompt = try_catch("prompt", mandatory_sev)
-        if prompt == 'discard_exit':
-            return True
-        elif ftype == 'main_exit':
-            return False
-        # Warning attributes
-        warn_sev = 1
-        try_catch("flabel", warn_sev)
-        try_catch("olabel", warn_sev)
-        try_catch("restrictions", warn_sev)
-        try_catch("onmatch", warn_sev)
-        try_catch("oformat", warn_sev)
-        try_catch("search", warn_sev)
-        self._field = {"name":self.name,
-                       "flabel":self.flabel,
-                       "olabel":self.olabel,
-                       "type":self.type,
-                       "restrictions":self.restrictions,
-                       "onmatch":self.onmatch,
-                       "scripts":self.scripts}
-        return True
 
     def postloop(self):
         """Return the field that is in turn returned by the main cmdloop."""
-        return self._field
+        return self.fdict
 
     def validation(self, input_line, regex, orientation, errormsg):
         """Set the name of the field/column."""
