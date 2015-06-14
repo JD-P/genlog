@@ -107,17 +107,13 @@ class Logger():
         flist = []
         fields = settings["fields"]
         for field in fields:
-            fdict = {}
             cascade = self.get_ancestors(Logger, field, logname)
             cascade.reverse()
             cascade.append(field)
-            for field in cascade:
+            fdict = cascade[0]
+            for field in cascade[1:]:
                 for key in field:
-                    try:
-                        fdict[key]
-                    except KeyError:
-                        fdict[key] = None
-                    fdict[key] = field[key] if field[key] else fdict[key]
+                    fdict[key] = field[key]
             fobject = Field.from_fdict(Field, fdict)
             fobject.unpack_scripts(logname=logname)
             flist.append(fobject)
@@ -313,6 +309,24 @@ class Logger():
             else:
                 ancestor = get_ancestor(self, field, logname)
 
+    def get_ftype(self, ftype, logname=None):
+        """Get the json representing an ftype from either the global ftype
+        namespace or from a log's ftype directory."""
+        if logname:
+            paths = Logger.genpaths(Logger, logname)
+            topdir = paths["logdir"]
+        else:
+            paths = Logger.penpaths(Logger)
+            topdir = paths["confdir"]
+
+        ftypesdir = os.path.join(topdir, "_ftypes")
+        ftypepath = os.path.join(ftypesdir, ftype)
+        try:
+            ftype_file = open(ftypepath)
+        except IOError:
+            return False
+        return json.load(ftype_file)
+
     def get_script(self, script, logname):
         """Return a script from the scripts name given as a string and the
         logname of the local logger."""
@@ -351,7 +365,7 @@ class Logger():
         """Search the column with the regex searchterm using the fields search 
         function or a fallback."""
         if "search" in field.scripts.keys():
-            search_results = field.search(searchterm, column_data)
+            search_results = field.search.main(searchterm, column_data)
             return search_results
         else:
             try:
@@ -1037,8 +1051,8 @@ class Field():
             if scriptname:
                 script = self.get_script(scriptname, logname)
             else:
-                setattr(self, (scriptkey + "_main"), None)
-            setattr(self, (scriptkey + "_main"), script)
+                setattr(self, (scriptkey), None)
+            setattr(self, (scriptkey), script)
         return True
 
 
