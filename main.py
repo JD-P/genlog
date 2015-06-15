@@ -1,8 +1,7 @@
 import argparse
 
-from logger import Logger, LogPrinter, Restriction
-
 import cli_interface
+from logger import Logger, LogPrinter, Restriction
 
 def main():
     """Handle command line arguments, determine which interface to use and cede

@@ -14,9 +14,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-from logger import Logger, LogPrinter, Field, Restriction
-
 import cmd
+
+from logger import Logger, LogPrinter, Field, Restriction
 
 def option(self,options):
     """Take a dictionary of options and present these as choices to the user, return the selected options value."""
@@ -498,7 +498,6 @@ class CliFieldEditor(cmd.Cmd):
                 else:
                     pass
 
-
     def cmdloop(self, intro=None):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
@@ -561,8 +560,6 @@ class CliFieldEditor(cmd.Cmd):
             return None
         CliUtils.print_iterable(CliUtils, self.field_attributes, 4)
         return False
-            
-        
 
     def do_name(self, name=None):
         """Set the name of the field/column: name <name>"""
@@ -655,6 +652,7 @@ class CliFieldEditor(cmd.Cmd):
             return True
         else:
             return False
+
     def do_add_handler(self, args=None):
         """Set the script <script> that handles the event <event>: add_handler
         <event> <script>"""
@@ -802,7 +800,6 @@ class CliFieldEditor(cmd.Cmd):
                 else:
                     self.fdict[attribute] = attribute_dict
             return self.fdict
-                    
 
         unset = warn_layer(self.field_attributes)
         for warn_severity in unset:
@@ -818,8 +815,6 @@ class CliFieldEditor(cmd.Cmd):
                 else:
                     pass
         self.fdict = prepare_fdict(self.field_attributes)
-                    
-        
 
     def postcmd(self, stop, line):
         """Defines the stop return value for this cmdloop as 'end_loop'."""
