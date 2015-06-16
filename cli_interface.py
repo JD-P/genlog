@@ -117,7 +117,7 @@ class CliUtils():
             getattr(obj, attribute)
         except AttributeError:
             self.input_error("Attribute " + attribute + " was not filled out.")
-            yes = input("Would you like to fill it in now?")
+            yes = input("Would you like to fill it in now? ")
             if yes == 'y' or yes == 'yes':
                 setattr(obj, attribute, False)
                 while not getattr(obj, attribute):
@@ -263,6 +263,7 @@ class CliMainMenu(cmd.Cmd):
                 CliUtils.input_error(CliUtils, self, 
                                      "No name was given for new logger.")
                 return False
+
             new_log = CliMkLogTemplate(logname)
             new_log.cmdloop(logname.capitalize() + ":" + " Type 'add' to create"
                             " a new log template and 'help' for more options.\n\n")
@@ -487,8 +488,8 @@ class CliFieldEditor(cmd.Cmd):
         self.field_attributes = {}
         self.field_attributes['scripts'] = {"%layer":1}
         for method in dir(CliFieldEditor):
-            if method[0:3] == 'do_':
-                method_func = getattr(method, CliFieldEditor)
+            if method[0:3] == 'do_' and method != 'do_help':
+                method_func = getattr(CliFieldEditor, method)
                 attribute = method_func(CliFieldEditor)
                 if attribute:
                     key = attribute[0]
@@ -549,7 +550,7 @@ class CliFieldEditor(cmd.Cmd):
                 except ImportError:
                     pass
 
-    def add_field_attribute(key, value, severity):
+    def add_field_attribute(self, key, value, severity):
         """Add a field attribute to the field. If already present overwrites."""
         self.field_attributes[key] = {"value":value, "severity":severity}
 
@@ -607,7 +608,7 @@ class CliFieldEditor(cmd.Cmd):
         """Set the field type of the field/column: type <ftype>"""
         if ftype is None:
             return ["type", "mand"]
-        if Logger.get_ftype(Logger, ftype, self.logname):
+        if Logger.get_ftype(Logger, ftype, self.logger):
             self.add_field_attribute("type", ftype, "mand")
             return True
         elif Logger.get_ftype(Logger, ftype):
@@ -616,6 +617,7 @@ class CliFieldEditor(cmd.Cmd):
         else:
             self.input_error("Type given as argument was not a valid type in _ftypes")
             return False
+
     def do_prompt(self, script=None):
         """Set the script that displays the prompt for user input. Use no 
         arguments to set to None: prompt <script>"""
@@ -731,16 +733,18 @@ class CliFieldEditor(cmd.Cmd):
         else:
             return False
 
-    def do_finalize(self, arg):
+    def do_finalize(self, arg=None):
         """Finish and save field. Makes sure that mandatory attributes are filled 
         out, warns on others."""
+        fill_method = None
+
         def correct_unset(unset_attribute, severity, fill_method):
             """Try correcting an unset field attribute. If user declines to set,
             skip it or quit to field editor or main menu. Returns true if program 
             execution should continue."""
             self.input_error("Attribute '" + unset_attribute + 
                              "' was not filled out.")
-            yes = input("Would you like to fill it in now?")
+            yes = input("Would you like to fill it in now? ")
             if yes == 'y' or yes == 'yes':
                 filled = False
                 while not filled:
@@ -779,7 +783,7 @@ class CliFieldEditor(cmd.Cmd):
                         unset["mand"] = unset["mand"] + unset_next["mand"]
                         unset["warn"] = unset["warn"] + unset_next["warn"]
                     else:
-                        if attribute_dict["value"] is None:
+                        if "value" in attribute_dict and attribute_dict["value"] is None:
                             severity = attribute_dict["severity"]
                             fill_function = attribute_dict["fill_method"]
                             unset[severity].append({"attribute":f_attribute,
@@ -791,7 +795,7 @@ class CliFieldEditor(cmd.Cmd):
             and return the resulting dictionary."""
             fdict = {}
             for attribute in field_attributes:
-                attribtue_dict = fdict[attribute]
+                attribute_dict = fdict[attribute]
                 if isinstance(attribute_dict, dict):
                     if '%layer' in attribute_dict.keys():
                         prepare_fdict(attribute_dict)
@@ -801,9 +805,11 @@ class CliFieldEditor(cmd.Cmd):
                     self.fdict[attribute] = attribute_dict
             return self.fdict
 
+        if arg is None:
+            return None
         unset = warn_layer(self.field_attributes)
         for warn_severity in unset:
-            for warning in warn_severity:
+            for warning in unset[warn_severity]:
                 field_attribute = warning["attribute"]
                 fill_method = warning["fill_method"]
                 warn_result = correct_unset(field_attribute, warn_severity, 

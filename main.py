@@ -36,7 +36,7 @@ def main():
     if args.logger:
         logname = str(args.logger)
         LogMenu = cli_interface.CliLogMenu(logname)
-        LogMenue.cmdloop()
+        LogMenu.cmdloop()
     if args.entry:
         raise NotImplementedError("Manual additions of entries not available at"
                                   " this time. (But rest assured will be used"

@@ -298,16 +298,16 @@ class Logger():
             paths = Logger.genpaths(Logger, logname)
             topdir = paths["logdir"]
         else:
-            paths = Logger.penpaths(Logger)
+            paths = Logger.genpaths(Logger)
             topdir = paths["confdir"]
 
         ftypesdir = os.path.join(topdir, "_ftypes")
-        ftypepath = os.path.join(ftypesdir, ftype)
+        ftypepath = os.path.join(ftypesdir, ftype) + ".json"
         try:
-            ftype_file = open(ftypepath)
+            with open(ftypepath) as ftype_file:
+                return json.load(ftype_file)
         except IOError:
             return False
-        return json.load(ftype_file)
 
     def get_script(self, script, logname):
         """Return a script from the scripts name given as a string and the
