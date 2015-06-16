@@ -1,8 +1,7 @@
 import argparse
 
-from logger import Logger, LogPrinter, Restriction
-
 import cli_interface
+from logger import Logger, LogPrinter, Restriction
 
 def main():
     """Handle command line arguments, determine which interface to use and cede
@@ -37,7 +36,7 @@ def main():
     if args.logger:
         logname = str(args.logger)
         LogMenu = cli_interface.CliLogMenu(logname)
-        LogMenue.cmdloop()
+        LogMenu.cmdloop()
     if args.entry:
         raise NotImplementedError("Manual additions of entries not available at"
                                   " this time. (But rest assured will be used"

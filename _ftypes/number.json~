@@ -1,6 +1,0 @@
-{"name":"number",
-"type":"sltext",
-"scripts":
-	{"on_input":"number_input_finish"},
-"rtemplate":"[^0-9\.]|[\.]{2,}"
-"onmatch":"discard"}

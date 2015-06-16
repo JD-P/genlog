@@ -14,31 +14,15 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-#!/usr/bin/python3
-
-import time,datetime
-
-
-import json
-
-
-import os
-
-
-import sys
-
-
-import re
-
-
+import datetime
 import importlib
-
-
-import zipfile
-
-
+import json
+import os
 import pprint
-
+import re
+import sys
+import zipfile
+import pprint
 
 class Logger():
     """Implements the core logging facilities."""
@@ -61,7 +45,6 @@ class Logger():
         sys.path.pop() 
         sys.modules = oldcache
         return script
-
 
     def getfields(self, settings, logname):
         """Extract the fields from a logger settings.conf file and convert them
@@ -282,7 +265,6 @@ class Logger():
         else:
             return False
             
-
     def get_ancestors(self, field, logname):
         """Get the ancestors of a given field."""
         def get_ancestor(self, field, logname):
@@ -316,16 +298,16 @@ class Logger():
             paths = Logger.genpaths(Logger, logname)
             topdir = paths["logdir"]
         else:
-            paths = Logger.penpaths(Logger)
+            paths = Logger.genpaths(Logger)
             topdir = paths["confdir"]
 
         ftypesdir = os.path.join(topdir, "_ftypes")
-        ftypepath = os.path.join(ftypesdir, ftype)
+        ftypepath = os.path.join(ftypesdir, ftype) + ".json"
         try:
-            ftype_file = open(ftypepath)
+            with open(ftypepath) as ftype_file:
+                return json.load(ftype_file)
         except IOError:
             return False
-        return json.load(ftype_file)
 
     def get_script(self, script, logname):
         """Return a script from the scripts name given as a string and the
