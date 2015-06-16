@@ -497,7 +497,7 @@ class CliFieldEditor(cmd.Cmd):
                 if attribute:
                     key = attribute[0]
                     severity = attribute[1]
-                    self.field_attributes[key] = {"value":None, "severity":severity, 
+                    self.field_attributes[key] = {"value":Unregistered(), "severity":severity, 
                                                   "fill_method":method_func}
                 else:
                     pass
@@ -748,7 +748,7 @@ class CliFieldEditor(cmd.Cmd):
             execution should continue."""
             self.input_error("Attribute '" + unset_attribute + 
                              "' was not filled out.")
-            yes = input("Would you like to fill it in now? ")
+            yes = input("Would you like to fill it in now? y/n:")
             if yes == 'y' or yes == 'yes':
                 filled = False
                 while not filled:
@@ -783,13 +783,13 @@ class CliFieldEditor(cmd.Cmd):
                 if isinstance(attribute_dict, dict):
                     if '%layer' in attribute_dict.keys():
                         attribute_dict.pop('%layer')
-                        unset_next = warn_layer(layer_dict)
+                        unset_next = warn_layer(attribute_dict)
                         unset["mand"] = unset["mand"] + unset_next["mand"]
                         unset["warn"] = unset["warn"] + unset_next["warn"]
                     else:
-                        if "value" in attribute_dict and attribute_dict["value"] is None:
+                        if "value" in attribute_dict and isinstance(attribute_dict["value"], Unregistered):
                             severity = attribute_dict["severity"]
-                            fill_function = attribute_dict["fill_method"]
+                            fill_method = attribute_dict["fill_method"]
                             unset[severity].append({"attribute":f_attribute,
                                                     "fill_method":fill_method})
             return unset
@@ -848,3 +848,7 @@ class CliFieldEditor(cmd.Cmd):
     def input_error(self, message):
         """Prints an error message when input validation returns False."""
         self.stdout.write("*** Input Error: %s\n"%message)
+
+class Unregistered():
+    """Custom type to replace None in initialization of CliFieldEditor."""
+    pass
