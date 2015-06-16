@@ -144,12 +144,12 @@ If it wasn't found in either an error would be raised to this effect.
  - _ftypes
    - Individual json files representing field templates
  - **logger directories
-  - settings.conf
-  - logname-log.json
-  - _scripts
-    - Individual python scripts
-  - _ftypes
-    - Individual json files representing field templates
+   - settings.conf
+   - logname-log.json
+   - _scripts
+     - Individual python scripts
+   - _ftypes
+     - Individual json files representing field templates
 
 ## Data Model: ##
 
