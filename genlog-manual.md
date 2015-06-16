@@ -136,19 +136,19 @@ directory of the .loggers directory which is the 'global' script repository.
 If it wasn't found in either an error would be raised to this effect.
 
 ## Directory structure for generic logger: ##
- - home/origin directory
-  - .loggers
-   - _scripts
-     - Individual python scripts 
-   - _ftypes
-     - Individual json files representing field templates
-   - **logger directories
-    - settings.conf
-    - logname-log.json
-    - _scripts
-      - Individual python scripts
-    - _ftypes
-      - Individual json files representing field templates
+- home/origin directory
+ - .loggers
+ - _scripts
+   - Individual python scripts 
+ - _ftypes
+   - Individual json files representing field templates
+ - **logger directories
+  - settings.conf
+  - logname-log.json
+  - _scripts
+    - Individual python scripts
+  - _ftypes
+    - Individual json files representing field templates
 
 ## Data Model: ##
 
