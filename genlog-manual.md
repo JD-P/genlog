@@ -138,6 +138,7 @@ If it wasn't found in either an error would be raised to this effect.
 ## Directory structure for generic logger: ##
 - home/origin directory
  - .loggers
+ - settings.conf
  - _scripts
    - Individual python scripts 
  - _ftypes
