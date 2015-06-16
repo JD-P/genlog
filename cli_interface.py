@@ -15,6 +15,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 """
 
 import cmd
+import pprint
 
 from logger import Logger, LogPrinter, Field, Restriction
 
@@ -485,8 +486,10 @@ class CliFieldEditor(cmd.Cmd):
         self.prompt = "(MkField)> "
         self.logger = logger
         # % is in layer attribute so that event names can't conflict with it
+        self.fdict = {}
         self.field_attributes = {}
         self.field_attributes['scripts'] = {"%layer":1}
+        self.scripts = {}
         for method in dir(CliFieldEditor):
             if method[0:3] == 'do_' and method != 'do_help':
                 method_func = getattr(CliFieldEditor, method)
@@ -540,6 +543,7 @@ class CliFieldEditor(cmd.Cmd):
                             line = line.rstrip('\r\n')
                 line = self.precmd(line)
                 stop = self.onecmd(line)
+                pprint.pprint(self.field_attributes)  # DEBUG
                 stop = self.postcmd(stop, line)
             return self.postloop()
         finally:
@@ -707,7 +711,7 @@ class CliFieldEditor(cmd.Cmd):
                                  " it doesn't have its .py extension.")
                 return False
             else:
-                self.scripts["oformat"] = {"value":script, "severity":warn}
+                self.scripts["oformat"] = {"value":script, "severity":"warn"}
                 return True
         else:
             return False
@@ -793,9 +797,8 @@ class CliFieldEditor(cmd.Cmd):
         def prepare_fdict(field_attributes):
             """Recursively extract attributes from self.field_attributes
             and return the resulting dictionary."""
-            fdict = {}
             for attribute in field_attributes:
-                attribute_dict = fdict[attribute]
+                attribute_dict = field_attributes[attribute]
                 if isinstance(attribute_dict, dict):
                     if '%layer' in attribute_dict.keys():
                         prepare_fdict(attribute_dict)
