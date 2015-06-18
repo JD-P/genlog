@@ -765,8 +765,8 @@ class CliFieldEditor(cmd.Cmd):
                 else:
                     return 'main_exit'
             else:
-                return True
-            return True
+                return False
+            return False
 
         def warn_layer(layer_dict):
             """Recursively take each layer of a field attribute dictionary 
@@ -782,7 +782,6 @@ class CliFieldEditor(cmd.Cmd):
                 attribute_dict = layer_dict[f_attribute]
                 if isinstance(attribute_dict, dict):
                     if '%layer' in attribute_dict.keys():
-                        attribute_dict.pop('%layer')
                         unset_next = warn_layer(attribute_dict)
                         unset["mand"] = unset["mand"] + unset_next["mand"]
                         unset["warn"] = unset["warn"] + unset_next["warn"]
@@ -801,6 +800,7 @@ class CliFieldEditor(cmd.Cmd):
                 attribute_dict = field_attributes[attribute]
                 if isinstance(attribute_dict, dict):
                     if '%layer' in attribute_dict.keys():
+                        attribute_dict.pop('%layer')
                         prepare_fdict(attribute_dict)
                     else:
                         self.fdict[attribute] = attribute_dict["value"]
@@ -821,9 +821,12 @@ class CliFieldEditor(cmd.Cmd):
                     return 'end_loop'
                 elif warn_result == 'main_exit':
                     return False
-                else:
+                elif warn_result:
                     pass
+                else:
+                    self.field_attributes.pop(field_attribute)
         self.fdict = prepare_fdict(self.field_attributes)
+        return 'end_loop'
 
     def postcmd(self, stop, line):
         """Defines the stop return value for this cmdloop as 'end_loop'."""
