@@ -122,7 +122,7 @@ class Logger():
 
     def load_log(self, logname):
         """Return the json of the log for logname."""
-        paths = self.genpaths(logname)
+        paths = self.genpaths(self, logname)
         jsonpath = paths["jsonpath"]
         logfile = open(jsonpath, 'r')
         log = json.load(logfile)
@@ -153,7 +153,7 @@ class Logger():
         
     def add_entry(self, entry, logname):
         """Take an entry dictionary and write out to a JSON log based on it."""
-        paths = self.genpaths(logname)
+        paths = self.genpaths(self, logname)
         logpath = paths["jsonpath"]
         try:
             jlog = open(logpath, 'r')
@@ -250,10 +250,9 @@ class Logger():
             for _file in files:
                 if _file.split(".")[0] == search_name:
                     return treedir
-                else:
-                    return False
+            return False
         
-        paths = self.genpaths(logname)
+        paths = self.genpaths(self, logname)
         logdir = paths["logdir"]
         confdir = paths["confdir"]
         localnode = search_node(tree, search_name, logdir)
@@ -273,7 +272,7 @@ class Logger():
             if name == ftype:
                 return False
             else:
-                contain_dir = self.search_tree('_ftypes', ftype, logname)
+                contain_dir = self.search_tree(self, '_ftypes', ftype, logname)
                 if not contain_dir:
                     raise ValueError("No field of this type in local or global"
                                      " namespace.")
@@ -289,7 +288,7 @@ class Logger():
             if ancestor["name"] == ancestor["type"]:
                 return ancestors
             else:
-                ancestor = get_ancestor(self, field, logname)
+                ancestor = get_ancestor(self, ancestor, logname)
 
     def get_ftype(self, ftype, logname=None):
         """Get the json representing an ftype from either the global ftype
@@ -331,13 +330,17 @@ class Logger():
 
     def mklogtemplate(self, logname, settings):
         """Make a new log template in the .loggers directory."""
-        paths = Logger.genpaths(logname)
+        paths = Logger.genpaths(Logger, logname)
         os.mkdir(paths["logdir"])
-        log.confinit(logname, settings)
+        ftypes_dir = os.path.join(paths["logdir"], "_ftypes")
+        scripts_dir = os.path.join(paths["logdir"], "_scripts")
+        os.mkdir(ftypes_dir)
+        os.mkdir(scripts_dir)
+        self.confinit(Logger, logname, settings)
         return True
 
     def confinit(self, logger, settings):
-        paths = self.genpaths(logger)
+        paths = self.genpaths(self, logger)
         confpath = paths["confpath"]
         config = open(confpath, 'w')
         json.dump(settings, config)
