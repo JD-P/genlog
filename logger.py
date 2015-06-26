@@ -311,11 +311,11 @@ class Logger():
     def get_script(self, script, logname):
         """Return a script from the scripts name given as a string and the
         logname of the local logger."""
-        contain_dir = self.search_tree('_scripts', script, logname)
+        contain_dir = self.search_tree(self, '_scripts', script, logname)
         if not contain_dir:
             raise ValueError("No script by name " + script + "in local or global"
                              " namespace.")
-        imported_script = self.import_from_path(script, contain_dir)
+        imported_script = self.import_from_path(self, script, contain_dir)
         return imported_script
 
     def verify_logname(self, logname):
@@ -1031,13 +1031,13 @@ class Field():
             scripts = self.scripts
         if not logname:
             logname = self.logname
-        for scriptkey in scriptnames:
-            scriptname = scriptnames[scriptkey]
+        for scriptkey in scripts:
+            scriptname = scripts[scriptkey]
             if scriptname:
                 script = self.get_script(scriptname, logname)
+                setattr(self, (scriptkey), script)
             else:
                 setattr(self, (scriptkey), None)
-            setattr(self, (scriptkey), script)
         return True
 
 
