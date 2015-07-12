@@ -7,7 +7,7 @@ class Test(unittest.TestCase):
         self.assertTrue(Prompts.cli_prompt)
 
 def main(interface, flabel):
-    """The default prompt, which accepts a single line of text and returns a 
+    """The default prompt, which accepts a single line of text and returns a
     dictionary. The dictionary can have many key:value pairs but the one expected
     is 'line' which is the actual string to be entered into the row."""
     vdict = {}
@@ -18,10 +18,16 @@ def main(interface, flabel):
         raise ValueError("Interface requested is not supported by this field.")
 
 class Prompts():
-    interfaces = ['cli']
     """Implements the actual prompt widgets for each interface."""
+
+    interfaces = ['cli']
+
+    @staticmethod
     def cli_prompt(flabel):
         """Prints a line of text given with flabel and otherwise uses pythons
         line input function to get a piece of text from the user."""
         line = input(flabel)
         return line
+
+if __name__ == '__main__':
+    unittest.main()
