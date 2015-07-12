@@ -16,26 +16,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 import cmd
 import pprint
+import time
 
 from logger import Logger, LogPrinter, Field, Restriction
-
-def option(self,options):
-    """Take a dictionary of options and present these as choices to the user, return the selected options value."""
-    index = 0
-    for option in options:
-        if (index % 4) == 0 and index > 0:
-            print(option)
-        else:
-            print(option, end='')
-    while 1:
-        option = input()
-        rvalue = options.get(option)
-        if rvalue:
-            return rvalue
-        else:
-            print("Not a valid option. Please choose one from the list.")
-            continue
-
 
 class CliUtils():
     """Class object to store static methods related to the Cli interface."""
@@ -110,34 +93,6 @@ class CliUtils():
                 return True
         else:
             return False
-
-    def try_catch(self, obj, attribute, severity, prompt=">"):
-        """Implement a try catch routine to test for presence of attribute.
-        Returns true if program execution should continue."""
-        try:
-            getattr(obj, attribute)
-        except AttributeError:
-            self.input_error("Attribute " + attribute + " was not filled out.")
-            yes = input("Would you like to fill it in now? ")
-            if yes == 'y' or yes == 'yes':
-                setattr(obj, attribute, False)
-                while not getattr(obj, attribute):
-                    fill = input(prompt)
-                    func = getattr(obj, "do_" + attribute)
-                    func(fill)
-                return True
-            else:
-                setattr(obj, attribute, None)
-
-            if severity == 0:   
-                yes = input("Discard changes and exit? y/n:")
-                if yes == 'y' or yes == 'yes':
-                    return 'discard_exit'
-                else:
-                    return 'main_exit'
-            else:
-                return True
-        return True
 
     def input_error(self, obj, message):
         """Prints an error message when input validation returns False."""
@@ -413,6 +368,12 @@ class CliMkLogTemplate(cmd.Cmd):
         self.fields = []
         self.prompt = "(MkTemplate)> "
         self.settings = {}
+        register = {
+            "formatting":{"value":Unregistered(), "severity":"warn", 
+                          "fill_method":self.do_formatting}
+            }
+        for setting in register:
+            self.settings[setting] = register[setting]
 
     def do_status(self, arg):
         """Print the currently set values for this log template."""
@@ -421,6 +382,7 @@ class CliMkLogTemplate(cmd.Cmd):
         for field in self.fields:
             print((' '  * 3), (str(findex) + "."), field)
             findex += 1
+        print("Settings:\n")
         for setting in self.settings:
             print((' ' * 3), (setting.capitalize() + ":"), self.settings[setting])
         return False
@@ -431,6 +393,8 @@ class CliMkLogTemplate(cmd.Cmd):
         field = FieldEditor.cmdloop("Fill out the attributes for this field."
                                     " (For assistance type: help)")
         self.fields.append(field)
+        self.onecmd("status")
+        return False
 
     def do_remove(self, fieldindex):
         """Remove a field that's been added to the template: remove <fieldindex>"""
@@ -463,11 +427,14 @@ class CliMkLogTemplate(cmd.Cmd):
         """Verify that at least one field has been specified and warns on unset
         attributes. Takes no arguments."""
         if self.fields:
-            CliUtils.try_catch(CliUtils, self, "formatting", 1, self.prompt)
             self.settings["fields"] = self.fields
+            # If and when this passes three attributes we'll set up infrastructure
+            # like exists for CliFieldEditor.
+            if isinstance(self.settings["formatting"]["value"], Unregistered):
+                self.settings["formatting"] = None
             Logger.mklogtemplate(Logger, self.logname, self.settings)
             print("Log template written! Returning to main menu...")
-            time.sleep(3)
+            time.sleep(1)
             return True
         else:
             print("You must specify at least one field to create a log template.")
@@ -543,7 +510,6 @@ class CliFieldEditor(cmd.Cmd):
                             line = line.rstrip('\r\n')
                 line = self.precmd(line)
                 stop = self.onecmd(line)
-                pprint.pprint(self.field_attributes)  # DEBUG
                 stop = self.postcmd(stop, line)
             return self.postloop()
         finally:
